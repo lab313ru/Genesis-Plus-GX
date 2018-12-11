@@ -75,6 +75,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>d:\git\RetroArch\pkg\msvc\x64\Debug QT+CG\cores\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -89,7 +90,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;GENESISPLUSGXLIBRETRO_EXPORTS;_CRT_SECURE_NO_WARNINGS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);USE_LIBTREMOR;USE_LIBCHDR;PACKAGE_VERSION="1.3.2";FLAC_API_EXPORTS;FLAC__HAS_OGG=0;HAVE_LROUND;HAVE_STDINT_H;_7ZIP_ST;HAVE_FSEEKO;DEBUG;USE_16BPP_RENDERING;FRONTEND_SUPPORTS_RGB565;LSB_FIRST;BYTE_ORDER=LITTLE_ENDIAN;HAVE_ZLIB;__LIBRETRO__;M68K_OVERCLOCK_SHIFT=20;Z80_OVERCLOCK_SHIFT=20;HAVE_YM3438_CORE;INLINE=static __inline;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>../../core/cd_hw/libchdr/src;../../core/cd_hw/libchdr/deps/libFLAC/include;../../core/cd_hw/libchdr/deps/lzma;../../core/cd_hw/libchdr/deps/zlib;../../core;../../core/z80;../../core/m68k;../../core/ntsc;../../core/sound;../../core/input_hw;../../core/cd_hw;../../core/cart_hw;../../core/cart_hw/svp;../../libretro;../../libretro/libretro-common/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../core/cd_hw/libchdr/src;../../core/cd_hw/libchdr/deps/libFLAC/include;../../core/cd_hw/libchdr/deps/lzma;../../core/cd_hw/libchdr/deps/zlib;../../core;../../core/debug/;../../core/z80;../../core/m68k;../../core/ntsc;../../core/sound;../../core/input_hw;../../core/cd_hw;../../core/cart_hw;../../core/cart_hw/svp;../../libretro;../../libretro/libretro-common/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -103,7 +104,7 @@
       <PreprocessorDefinitions>_DEBUG;GENESISPLUSGXLIBRETRO_EXPORTS;_CRT_SECURE_NO_WARNINGS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);USE_LIBTREMOR;USE_LIBCHDR;PACKAGE_VERSION="1.3.2";FLAC_API_EXPORTS;FLAC__HAS_OGG=0;HAVE_LROUND;HAVE_STDINT_H;_7ZIP_ST;HAVE_FSEEKO;DEBUG;USE_16BPP_RENDERING;FRONTEND_SUPPORTS_RGB565;LSB_FIRST;BYTE_ORDER=LITTLE_ENDIAN;HAVE_ZLIB;__LIBRETRO__;M68K_OVERCLOCK_SHIFT=20;Z80_OVERCLOCK_SHIFT=20;HAVE_YM3438_CORE;INLINE=static __inline;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>../../core/cd_hw/libchdr/src;../../core/cd_hw/libchdr/deps/libFLAC/include;../../core/cd_hw/libchdr/deps/lzma;../../core/cd_hw/libchdr/deps/zlib;../../core;../../core/z80;../../core/m68k;../../core/ntsc;../../core/sound;../../core/input_hw;../../core/cd_hw;../../core/cart_hw;../../core/cart_hw/svp;../../libretro;../../libretro/libretro-common/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../core/cd_hw/libchdr/src;../../core/cd_hw/libchdr/deps/libFLAC/include;../../core/cd_hw/libchdr/deps/lzma;../../core/cd_hw/libchdr/deps/zlib;../../core;../../core/debug/;../../core/z80;../../core/m68k;../../core/ntsc;../../core/sound;../../core/input_hw;../../core/cd_hw;../../core/cart_hw;../../core/cart_hw/svp;../../libretro;../../libretro/libretro-common/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -119,7 +120,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;GENESISPLUSGXLIBRETRO_EXPORTS;_CRT_SECURE_NO_WARNINGS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);USE_LIBTREMOR;USE_LIBCHDR;PACKAGE_VERSION="1.3.2";FLAC_API_EXPORTS;FLAC__HAS_OGG=0;HAVE_LROUND;HAVE_STDINT_H;_7ZIP_ST;HAVE_FSEEKO;NDEBUG;USE_16BPP_RENDERING;FRONTEND_SUPPORTS_RGB565;LSB_FIRST;BYTE_ORDER=LITTLE_ENDIAN;HAVE_ZLIB;__LIBRETRO__;M68K_OVERCLOCK_SHIFT=20;Z80_OVERCLOCK_SHIFT=20;HAVE_YM3438_CORE;INLINE=static __inline;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>../../core/cd_hw/libchdr/src;../../core/cd_hw/libchdr/deps/libFLAC/include;../../core/cd_hw/libchdr/deps/lzma;../../core/cd_hw/libchdr/deps/zlib;../../core;../../core/z80;../../core/m68k;../../core/ntsc;../../core/sound;../../core/input_hw;../../core/cd_hw;../../core/cart_hw;../../core/cart_hw/svp;../../libretro;../../libretro/libretro-common/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../core/cd_hw/libchdr/src;../../core/cd_hw/libchdr/deps/libFLAC/include;../../core/cd_hw/libchdr/deps/lzma;../../core/cd_hw/libchdr/deps/zlib;../../core;../../core/debug/;../../core/z80;../../core/m68k;../../core/ntsc;../../core/sound;../../core/input_hw;../../core/cd_hw;../../core/cart_hw;../../core/cart_hw/svp;../../libretro;../../libretro/libretro-common/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -137,7 +138,7 @@
       <PreprocessorDefinitions>NDEBUG;GENESISPLUSGXLIBRETRO_EXPORTS;_CRT_SECURE_NO_WARNINGS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions);USE_LIBTREMOR;USE_LIBCHDR;PACKAGE_VERSION="1.3.2";FLAC_API_EXPORTS;FLAC__HAS_OGG=0;HAVE_LROUND;HAVE_STDINT_H;_7ZIP_ST;HAVE_FSEEKO;NDEBUG;USE_16BPP_RENDERING;FRONTEND_SUPPORTS_RGB565;LSB_FIRST;BYTE_ORDER=LITTLE_ENDIAN;HAVE_ZLIB;__LIBRETRO__;M68K_OVERCLOCK_SHIFT=20;Z80_OVERCLOCK_SHIFT=20;HAVE_YM3438_CORE;INLINE=static __inline;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>../../core/cd_hw/libchdr/src;../../core/cd_hw/libchdr/deps/libFLAC/include;../../core/cd_hw/libchdr/deps/lzma;../../core/cd_hw/libchdr/deps/zlib;../../core;../../core/z80;../../core/m68k;../../core/ntsc;../../core/sound;../../core/input_hw;../../core/cd_hw;../../core/cart_hw;../../core/cart_hw/svp;../../libretro;../../libretro/libretro-common/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../core/cd_hw/libchdr/src;../../core/cd_hw/libchdr/deps/libFLAC/include;../../core/cd_hw/libchdr/deps/lzma;../../core/cd_hw/libchdr/deps/zlib;../../core;../../core/debug/;../../core/z80;../../core/m68k;../../core/ntsc;../../core/sound;../../core/input_hw;../../core/cd_hw;../../core/cart_hw;../../core/cart_hw/svp;../../libretro;../../libretro/libretro-common/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -191,6 +192,7 @@
     <ClCompile Include="..\..\core\cd_hw\libchdr\src\huffman.c" />
     <ClCompile Include="..\..\core\cd_hw\pcm.c" />
     <ClCompile Include="..\..\core\cd_hw\scd.c" />
+    <ClCompile Include="..\..\core\debug\debug.c" />
     <ClCompile Include="..\..\core\genesis.c" />
     <ClCompile Include="..\..\core\input_hw\activator.c" />
     <ClCompile Include="..\..\core\input_hw\gamepad.c" />
@@ -308,6 +310,7 @@
     <ClInclude Include="..\..\core\cd_hw\libchdr\src\huffman.h" />
     <ClInclude Include="..\..\core\cd_hw\pcm.h" />
     <ClInclude Include="..\..\core\cd_hw\scd.h" />
+    <ClInclude Include="..\..\core\debug\debug.h" />
     <ClInclude Include="..\..\core\genesis.h" />
     <ClInclude Include="..\..\core\input_hw\activator.h" />
     <ClInclude Include="..\..\core\input_hw\gamepad.h" />

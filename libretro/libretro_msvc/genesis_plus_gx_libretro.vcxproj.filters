@@ -82,6 +82,9 @@
     <Filter Include="core\ntsc">
       <UniqueIdentifier>{08366101-bc7b-4009-8f09-65804bdab6ea}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\debug">
+      <UniqueIdentifier>{1b962ab8-fa27-420a-96ef-9d063b5d64f4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\core\cd_hw\libchdr\src\bitstream.c">
@@ -383,6 +386,9 @@
     </ClCompile>
     <ClCompile Include="..\scrc32.c">
       <Filter>libretro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\core\debug\debug.c">
+      <Filter>core\debug</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -748,6 +754,9 @@
     </ClInclude>
     <ClInclude Include="..\..\core\shared.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\core\debug\debug.h">
+      <Filter>core\debug</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

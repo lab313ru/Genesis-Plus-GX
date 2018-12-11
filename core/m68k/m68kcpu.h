@@ -14,6 +14,7 @@
 #endif /* M68K_EMULATE_ADDRESS_ERROR */
 
 #include "m68k.h"
+#include "debug.h"
 
 
 /* ======================================================================== */
@@ -186,6 +187,7 @@
 #define REG_DA           m68ki_cpu.dar /* easy access to data and address regs */
 #define REG_D            m68ki_cpu.dar
 #define REG_A            (m68ki_cpu.dar+8)
+#define REG_PPC          m68ki_cpu.ppc
 #define REG_PC           m68ki_cpu.pc
 #define REG_SP_BASE      m68ki_cpu.sp
 #define REG_USP          m68ki_cpu.sp[0]
@@ -238,6 +240,9 @@
 #if M68K_EMULATE_FC == OPT_ON
 #define CALLBACK_SET_FC       m68ki_cpu.set_fc_callback
 #endif
+#if M68K_INSTRUCTION_HOOK == OPT_ON
+#define CALLBACK_INSTR_HOOK   m68ki_cpu.instr_hook_callback
+#endif
 
 
 /* ----------------------------- Configuration ---------------------------- */
@@ -275,6 +280,16 @@
 #else
   #define m68ki_tas_callback() 0
 #endif /* M68K_TAS_HAS_CALLBACK */
+
+#if M68K_INSTRUCTION_HOOK
+	#if M68K_INSTRUCTION_HOOK == OPT_SPECIFY_HANDLER
+		#define m68ki_instr_hook() M68K_INSTRUCTION_CALLBACK()
+	#else
+		#define m68ki_instr_hook() CALLBACK_INSTR_HOOK()
+	#endif
+#else
+	#define m68ki_instr_hook()
+#endif /* M68K_INSTRUCTION_HOOK */
 
 
 /* Enable or disable function code emulation */
@@ -849,43 +864,60 @@ INLINE uint m68ki_read_imm_32(void)
  */
 INLINE uint m68ki_read_8(uint address)
 {
-  cpu_memory_map *temp = &m68ki_cpu.memory_map[((address)>>16)&0xff];;
+  cpu_memory_map *temp = &m68ki_cpu.memory_map[((address)>>16)&0xff];
+  uint val;
 
-  m68ki_set_fc(FLAG_S | m68ki_get_address_space()) /* auto-disable (see m68kcpu.h) */
+  m68ki_set_fc(FLAG_S | m68ki_get_address_space()); /* auto-disable (see m68kcpu.h) */
 
-  if (temp->read8) return (*temp->read8)(ADDRESS_68K(address));
-  else return READ_BYTE(temp->base, (address) & 0xffff);
+  if (temp->read8) val = (*temp->read8)(ADDRESS_68K(address));
+  else val = READ_BYTE(temp->base, (address) & 0xffff);
+
+  check_breakpoint(BPT_M68K_R, 1, address, val);
+
+  return val;
 }
 
 INLINE uint m68ki_read_16(uint address)
 {
   cpu_memory_map *temp;
+  uint val;
 
-  m68ki_set_fc(FLAG_S | m68ki_get_address_space()) /* auto-disable (see m68kcpu.h) */
-  m68ki_check_address_error(address, MODE_READ, FLAG_S | m68ki_get_address_space()) /* auto-disable (see m68kcpu.h) */
+  m68ki_set_fc(FLAG_S | m68ki_get_address_space()); /* auto-disable (see m68kcpu.h) */
+  m68ki_check_address_error(address, MODE_READ, FLAG_S | m68ki_get_address_space()); /* auto-disable (see m68kcpu.h) */
   
   temp = &m68ki_cpu.memory_map[((address)>>16)&0xff];
-  if (temp->read16) return (*temp->read16)(ADDRESS_68K(address));
-  else return *(uint16 *)(temp->base + ((address) & 0xffff));
+  if (temp->read16) val = (*temp->read16)(ADDRESS_68K(address));
+  else val = *(uint16 *)(temp->base + ((address) & 0xffff));
+
+  check_breakpoint(BPT_M68K_R, 2, address, val);
+
+  return val;
 }
 
 INLINE uint m68ki_read_32(uint address)
 {
   cpu_memory_map *temp;
+  uint val;
 
-  m68ki_set_fc(FLAG_S | m68ki_get_address_space()) /* auto-disable (see m68kcpu.h) */
-  m68ki_check_address_error(address, MODE_READ, FLAG_S | m68ki_get_address_space()) /* auto-disable (see m68kcpu.h) */
+  m68ki_set_fc(FLAG_S | m68ki_get_address_space()); /* auto-disable (see m68kcpu.h) */
+  m68ki_check_address_error(address, MODE_READ, FLAG_S | m68ki_get_address_space()); /* auto-disable (see m68kcpu.h) */
 
   temp = &m68ki_cpu.memory_map[((address)>>16)&0xff];
-  if (temp->read16) return ((*temp->read16)(ADDRESS_68K(address)) << 16) | ((*temp->read16)(ADDRESS_68K(address + 2)));
-  else return m68k_read_immediate_32(address);
+  if (temp->read16) val = ((*temp->read16)(ADDRESS_68K(address)) << 16) | ((*temp->read16)(ADDRESS_68K(address + 2)));
+  else val = m68k_read_immediate_32(address);
+
+  check_breakpoint(BPT_M68K_R, 4, address, val);
+
+  return val;
 }
 
 INLINE void m68ki_write_8(uint address, uint value)
 {
   cpu_memory_map *temp;
 
-  m68ki_set_fc(FLAG_S | FUNCTION_CODE_USER_DATA) /* auto-disable (see m68kcpu.h) */
+  m68ki_set_fc(FLAG_S | FUNCTION_CODE_USER_DATA); /* auto-disable (see m68kcpu.h) */
+
+  check_breakpoint(BPT_M68K_W, 1, address, value);
 
   temp = &m68ki_cpu.memory_map[((address)>>16)&0xff];
   if (temp->write8) (*temp->write8)(ADDRESS_68K(address),value);
@@ -896,8 +928,10 @@ INLINE void m68ki_write_16(uint address, uint value)
 {
   cpu_memory_map *temp;
 
-  m68ki_set_fc(FLAG_S | FUNCTION_CODE_USER_DATA) /* auto-disable (see m68kcpu.h) */
+  m68ki_set_fc(FLAG_S | FUNCTION_CODE_USER_DATA); /* auto-disable (see m68kcpu.h) */
   m68ki_check_address_error(address, MODE_WRITE, FLAG_S | FUNCTION_CODE_USER_DATA); /* auto-disable (see m68kcpu.h) */
+
+  check_breakpoint(BPT_M68K_W, 2, address, value);
 
   temp = &m68ki_cpu.memory_map[((address)>>16)&0xff];
   if (temp->write16) (*temp->write16)(ADDRESS_68K(address),value);
@@ -908,8 +942,10 @@ INLINE void m68ki_write_32(uint address, uint value)
 {
   cpu_memory_map *temp;
 
-  m68ki_set_fc(FLAG_S | FUNCTION_CODE_USER_DATA) /* auto-disable (see m68kcpu.h) */
-  m68ki_check_address_error(address, MODE_WRITE, FLAG_S | FUNCTION_CODE_USER_DATA) /* auto-disable (see m68kcpu.h) */
+  m68ki_set_fc(FLAG_S | FUNCTION_CODE_USER_DATA); /* auto-disable (see m68kcpu.h) */
+  m68ki_check_address_error(address, MODE_WRITE, FLAG_S | FUNCTION_CODE_USER_DATA); /* auto-disable (see m68kcpu.h) */
+
+  check_breakpoint(BPT_M68K_W, 4, address, value);
 
   temp = &m68ki_cpu.memory_map[((address)>>16)&0xff];
   if (temp->write16) (*temp->write16)(ADDRESS_68K(address),value>>16);
