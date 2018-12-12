@@ -46,6 +46,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#include "gui.h"
+
 #ifdef _MSC_VER
 #define snprintf _snprintf
 #endif
@@ -2453,10 +2455,13 @@ void retro_init(void)
    check_system_specs();
 
    environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &serialization_quirks);
+
+   run_gui();
 }
 
 void retro_deinit(void)
 {
+    stop_gui();
 }
 
 void retro_reset(void)
@@ -2545,6 +2550,8 @@ void retro_run(void)
          restart_eq = false;
       }
    }
+
+   update_gui();
 }
 
 #undef  CHUNKSIZE

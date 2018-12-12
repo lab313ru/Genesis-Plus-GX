@@ -42,6 +42,10 @@
 #ifndef _VDP_H_
 #define _VDP_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* VDP context */
 extern uint8 reg[0x20];
 extern uint8 sat[0x400];
@@ -102,5 +106,9 @@ extern unsigned int vdp_z80_ctrl_r(unsigned int cycles);
 extern unsigned int vdp_hvc_r(unsigned int cycles);
 extern void vdp_test_w(unsigned int data);
 extern int vdp_68k_irq_ack(int int_level);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _VDP_H_ */

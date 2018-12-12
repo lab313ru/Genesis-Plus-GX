@@ -3,6 +3,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerCommand>d:\git\RetroArch\pkg\msvc\x64\Debug QT+CG\RetroArch-msvc2017.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommand>d:\git\RetroArch_fork\pkg\msvc\x64\Debug\RetroArch-msvc2017.exe</LocalDebuggerCommand>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LocalDebuggerCommand>d:\git\RetroArch_fork\pkg\msvc\x64\Release\RetroArch-msvc2017.exe</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

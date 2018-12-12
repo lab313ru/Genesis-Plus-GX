@@ -42,6 +42,10 @@
 #ifndef _GENESIS_H_
 #define _GENESIS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "md_cart.h"
 #include "sms_cart.h"
 #include "scd.h"
@@ -77,5 +81,8 @@ extern void gen_zreset_w(unsigned int state, unsigned int cycles);
 extern void gen_zbank_w(unsigned int state);
 extern int z80_irq_callback(int param);
 
-#endif /* _GEN_H_ */
+#ifdef __cplusplus
+}
+#endif
 
+#endif /* _GEN_H_ */
