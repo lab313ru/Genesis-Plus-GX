@@ -32,6 +32,20 @@ RowCount = 16;	// Offset consists of 16 bytes
 
 static int is_cram_region = 0;
 
+static unsigned char read_cram_byte(unsigned char *array, unsigned int addr)
+{
+    unsigned short pp = *(unsigned short *)&array[(addr >> 1) << 1];
+    return cram_9b_to_16b(pp) >> ((addr & 1) ? 0 : 8);
+}
+
+static void write_cram_byte(HexRegion *array, unsigned int addr, unsigned char val)
+{
+    unsigned short vv = (read_cram_byte(array->Array, addr ^ array->Swap) << ((addr & 1) ? 8 : 0)) | (val << ((addr & 1) ? 0 : 8));
+    vv = cram_16b_to_9b(vv);
+    array->Array[((addr >> 1) << 1) + 1] = (vv >> 8) & 0xFF;
+    array->Array[((addr >> 1) << 1) + 0] = (vv >> 0) & 0xFF;
+}
+
 HexRegion HexRegions[] = {
     { "ROM", (unsigned char *)cart.rom, 0, sizeof(cart.rom), true, 1 },
     { "RAM 68K", (unsigned char *)work_ram, 0xFF0000, sizeof(work_ram), true, 1 },
@@ -342,35 +356,14 @@ void HexCopy(HexParams *Hex, char type)
     if (type == 0) {
         // numbers
         for (int i = 0; i < Hex->AddressSelectedTotal; i++) {
-            unsigned char vv = Hex->CurrentRegion.Array[(i + SELECTION_START) ^ Hex->CurrentRegion.Swap];
-
-            if (is_cram_region)
-            {
-                int rpos = ((i + SELECTION_START) >> 1) << 1;
-                unsigned short pp = *(unsigned short *)&Hex->CurrentRegion.Array[rpos];
-                vv = cram_9b_to_16b(pp) >> (((i + SELECTION_START) & 1) ? 0 : 8);
-            }
-
-            sprintf(str, "%02X", vv);
+            sprintf(str, "%02X", (unsigned char)(is_cram_region ? read_cram_byte(Hex->CurrentRegion.Array, i + SELECTION_START) : Hex->CurrentRegion.Array[(i + SELECTION_START) ^ Hex->CurrentRegion.Swap]));
             strcat(pGlobal, str);
         }
     }
     else if (type == 1) {
         // chars
         for (int i = 0; i < Hex->AddressSelectedTotal; i++) {
-            UINT8 check = Hex->CurrentRegion.Array[(i + SELECTION_START) ^ Hex->CurrentRegion.Swap];
-
-            if (is_cram_region)
-            {
-                int rpos = ((i + SELECTION_START) >> 1) << 1;
-                unsigned short pp = *(unsigned short *)&Hex->CurrentRegion.Array[rpos];
-                check = cram_9b_to_16b(pp) >> (((i + SELECTION_START) & 1) ? 0 : 8);
-            }
-
-            //if((check >= 32) && (check <= 127))
-            pGlobal[i] = (char)check;
-            //else
-            //	pGlobal[i] = '.';
+            pGlobal[i] = (unsigned char)(is_cram_region ? read_cram_byte(Hex->CurrentRegion.Array, i + SELECTION_START) : Hex->CurrentRegion.Array[(i + SELECTION_START) ^ Hex->CurrentRegion.Swap]);
         }
         pGlobal[Hex->AddressSelectedTotal] = 0;
     }
@@ -418,31 +411,28 @@ void HexPaste(HexParams *Hex, UINT8 type) {
             else {
                 Hex->InputDigit = (Hex->InputDigit << 4) + result;
 
-                int wpos = Hex->AddressSelectedFirst ^ Hex->CurrentRegion.Swap;
-                unsigned char ww = Hex->InputDigit;
                 if (is_cram_region)
                 {
-                    wpos = (Hex->AddressSelectedFirst >> 1) << 1;
-                    unsigned short pp = *(unsigned short *)&Hex->CurrentRegion.Array[wpos];
-                    unsigned short vv = (cram_9b_to_16b(pp) & (0xFF << ((Hex->AddressSelectedFirst & 1) ? 8 : 0))) | ww;
-                    ww = cram_16b_to_9b(vv) >> ((Hex->AddressSelectedFirst & 1) ? 0 : 8);
+                    write_cram_byte(&Hex->CurrentRegion, Hex->AddressSelectedFirst, Hex->InputDigit);
                 }
-                Hex->CurrentRegion.Array[wpos] = ww;
+                else
+                {
+                    Hex->CurrentRegion.Array[Hex->AddressSelectedFirst ^ Hex->CurrentRegion.Swap] = Hex->InputDigit;
+                }
+                
                 HexSelectAddress(Hex, Hex->AddressSelectedFirst + 1, 1);
             }
         }
         else if (type == 1) {
-            int wpos = Hex->AddressSelectedFirst ^ Hex->CurrentRegion.Swap;
-            unsigned char ww = pGlobal[i];
             if (is_cram_region)
             {
-                wpos = (Hex->AddressSelectedFirst >> 1) << 1;
-                unsigned short pp = *(unsigned short *)&Hex->CurrentRegion.Array[wpos];
-                unsigned short vv = (cram_9b_to_16b(pp) & (0xFF << ((Hex->AddressSelectedFirst & 1) ? 8 : 0))) | ww;
-                ww = cram_16b_to_9b(vv) >> ((Hex->AddressSelectedFirst & 1) ? 0 : 8);
+                write_cram_byte(&Hex->CurrentRegion, Hex->AddressSelectedFirst, pGlobal[i]);
+            }
+            else
+            {
+                Hex->CurrentRegion.Array[Hex->AddressSelectedFirst ^ Hex->CurrentRegion.Swap] = pGlobal[i];
             }
 
-            Hex->CurrentRegion.Array[wpos] = ww;
             if ((Hex->AddressSelectedFirst < Hex->CurrentRegion.Size - 1) && (pGlobal[i] != 0))
                 HexSelectAddress(Hex, Hex->AddressSelectedFirst + 1, 1);
             else
@@ -671,15 +661,7 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                     sprintf(buf, "%1X.", Hex->InputDigit);
                 else
                 {
-                    unsigned char vv = Hex->CurrentRegion.Array[carriage ^ Hex->CurrentRegion.Swap];
-                    if (is_cram_region)
-                    {
-                        int rpos = (carriage >> 1) << 1;
-                        unsigned short pp = *(unsigned short *)&Hex->CurrentRegion.Array[rpos];
-                        vv = cram_9b_to_16b(pp) >> ((carriage & 1) ? 0 : 8);
-                    }
-
-                    sprintf(buf, "%02X", vv);
+                    sprintf(buf, "%02X", (unsigned char)(is_cram_region ? read_cram_byte(Hex->CurrentRegion.Array, carriage) : Hex->CurrentRegion.Array[carriage ^ Hex->CurrentRegion.Swap]));
                 }
                 TextOut(Hex->DC, 0, 0, buf, strlen(buf));
                 // Print chars on the right
@@ -691,13 +673,7 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                     else
                         HexSetColors(Hex, 0);
 
-                    unsigned char check = Hex->CurrentRegion.Array[carriage ^ Hex->CurrentRegion.Swap];
-                    if (is_cram_region)
-                    {
-                        int rpos = (carriage >> 1) << 1;
-                        unsigned short pp = *(unsigned short *)&Hex->CurrentRegion.Array[rpos];
-                        check = cram_9b_to_16b(pp) >> ((carriage & 1) ? 0 : 8);
-                    }
+                    unsigned char check = (unsigned char)(is_cram_region ? read_cram_byte(Hex->CurrentRegion.Array, carriage) : Hex->CurrentRegion.Array[carriage ^ Hex->CurrentRegion.Swap]);
 
                     if ((check >= 0x20) && (check <= 0x7e))
                         buf[0] = (char)check;
@@ -758,14 +734,7 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 int i;
                 for (i = 0; i < Hex->CurrentRegion.Size; ++i)
                 {
-                    unsigned char vv = Hex->CurrentRegion.Array[i^Hex->CurrentRegion.Swap];
-                    if (is_cram_region)
-                    {
-                        int rpos = (i >> 1) << 1;
-                        unsigned short pp = *(unsigned short *)&Hex->CurrentRegion.Array[rpos];
-                        vv = cram_9b_to_16b(pp) >> ((i & 1) ? 0 : 8);
-                    }
-                    fwrite((const void *)vv, 1, 1, out);
+                    fwrite((const void *)(unsigned char)(is_cram_region ? read_cram_byte(Hex->CurrentRegion.Array, i) : Hex->CurrentRegion.Array[i ^ Hex->CurrentRegion.Swap]), 1, 1, out);
                 }
                 fclose(out);
             }
@@ -817,18 +786,17 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         c[0] = (char)(wParam & 0xFF);
         c[1] = 0;
         Hex->AddressSelectedFirst = Hex->AddressSelectedLast = SELECTION_START;
-        if (Hex->MouseArea == TEXT) {
-            int wpos = Hex->AddressSelectedFirst ^ Hex->CurrentRegion.Swap;
-            unsigned char ww = c[0];
+        if (Hex->MouseArea == TEXT)
+        {
             if (is_cram_region)
             {
-                wpos = (Hex->AddressSelectedFirst >> 1) << 1;
-                unsigned short pp = *(unsigned short *)&Hex->CurrentRegion.Array[wpos];
-                unsigned short vv = (cram_9b_to_16b(pp) & (0xFF << ((Hex->AddressSelectedFirst & 1) ? 8 : 0))) | ww;
-                ww = cram_16b_to_9b(vv) >> ((Hex->AddressSelectedFirst & 1) ? 0 : 8);
+                write_cram_byte(&Hex->CurrentRegion, Hex->AddressSelectedFirst, c[0]);
+            }
+            else
+            {
+                Hex->CurrentRegion.Array[Hex->AddressSelectedFirst ^ Hex->CurrentRegion.Swap] = c[0];
             }
 
-            Hex->CurrentRegion.Array[wpos] = ww;
             Hex->AddressSelectedFirst++;
             Hex->AddressSelectedLast = Hex->AddressSelectedFirst;
         }
@@ -844,17 +812,15 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             else {
                 Hex->InputDigit = (Hex->InputDigit << 4) + result;
 
-                int wpos = Hex->AddressSelectedFirst ^ Hex->CurrentRegion.Swap;
-                unsigned char ww = Hex->InputDigit;
                 if (is_cram_region)
                 {
-                    wpos = (Hex->AddressSelectedFirst >> 1) << 1;
-                    unsigned short pp = *(unsigned short *)&Hex->CurrentRegion.Array[wpos];
-                    unsigned short vv = (cram_9b_to_16b(pp) & (0xFF << ((Hex->AddressSelectedFirst & 1) ? 8 : 0))) | ww;
-                    ww = cram_16b_to_9b(vv) >> ((Hex->AddressSelectedFirst & 1) ? 0 : 8);
+                    write_cram_byte(&Hex->CurrentRegion, Hex->AddressSelectedFirst, Hex->InputDigit);
+                }
+                else
+                {
+                    Hex->CurrentRegion.Array[Hex->AddressSelectedFirst ^ Hex->CurrentRegion.Swap] = Hex->InputDigit;
                 }
 
-                Hex->CurrentRegion.Array[wpos] = ww;
                 HexSelectAddress(Hex, Hex->AddressSelectedFirst + 1, 1);
                 Hex->AddressSelectedLast = Hex->AddressSelectedFirst;
                 HexUpdateCaption(Hex);
@@ -1175,4 +1141,3 @@ void update_hex_editor()
             HexUpdateDialog(HexEditors[i], 0);
     }
 }
-
