@@ -44,6 +44,10 @@
 #ifndef _MD_CART_H_
 #define _MD_CART_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef USE_DYNAMIC_ALLOC
 #define cart ext->md_cart
 #else
@@ -90,5 +94,9 @@ extern void md_cart_init(void);
 extern void md_cart_reset(int hard_reset);
 extern int md_cart_context_save(uint8 *state);
 extern int md_cart_context_load(uint8 *state);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

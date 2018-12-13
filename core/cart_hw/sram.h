@@ -39,6 +39,10 @@
 #ifndef _SRAM_H_
 #define _SRAM_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct
 {
   uint8 detected;
@@ -59,5 +63,9 @@ extern void sram_write_word(unsigned int address, unsigned int data);
 
 /* global variables */
 extern T_SRAM sram;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

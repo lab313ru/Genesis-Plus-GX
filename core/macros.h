@@ -1,6 +1,10 @@
 #ifndef _MACROS_H_
 #define _MACROS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef LSB_FIRST
 
 #define READ_BYTE(BASE, ADDR) (BASE)[(ADDR)^1]
@@ -65,6 +69,10 @@
 #define cdStreamSeek        fseek
 #define cdStreamTell        ftell
 #define cdStreamGets        fgets
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* _MACROS_H_ */

@@ -42,10 +42,18 @@
 #ifndef _GGENIE_H_
 #define _GGENIE_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Function prototypes */
 extern void ggenie_init(void);
 extern void ggenie_shutdown(void);
 extern void ggenie_reset(int hard);
 extern void ggenie_switch(int enable);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

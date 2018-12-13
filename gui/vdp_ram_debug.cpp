@@ -23,10 +23,11 @@
 #include "gui.h"
 #include "vdp_ram_debug.h"
 
-HWND VDPRamHWnd = NULL;
+static HWND VDPRamHWnd = NULL;
+static HANDLE hThread = NULL;
 
-int VDPRamPal, VDPRamTile;
-bool IsVRAM;
+static int VDPRamPal, VDPRamTile;
+static bool IsVRAM;
 
 #define VDP_PAL_COUNT 4
 #define VDP_PAL_COLORS 16
@@ -1683,7 +1684,7 @@ LRESULT CALLBACK VDPRamProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return false;
 }
 
-DWORD WINAPI ThreadProc(LPVOID lpParam)
+static DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
     MSG messages;
 
@@ -1700,12 +1701,14 @@ DWORD WINAPI ThreadProc(LPVOID lpParam)
 
 void create_vdp_ram_debug()
 {
-    CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
+    hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
 }
 
 void destroy_vdp_ram_debug()
 {
     DestroyWindow(VDPRamHWnd);
+    TerminateThread(hThread, 0);
+    CloseHandle(hThread);
 }
 
 void update_vdp_ram_debug()

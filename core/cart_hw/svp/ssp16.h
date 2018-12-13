@@ -13,6 +13,10 @@
 #ifndef _SSP16_H_
 #define _SSP16_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* emulation event logging (from Picodrive) */
 #ifdef LOG_SVP
 #define EL_SVP     0x00004000 /* SVP stuff  */
@@ -75,5 +79,9 @@ typedef struct
 
 void ssp1601_reset(ssp1601_t *ssp);
 void ssp1601_run(int cycles);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

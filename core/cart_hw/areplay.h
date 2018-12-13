@@ -39,6 +39,10 @@
 #ifndef _AREPLAY_H_
 #define _AREPLAY_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define AR_SWITCH_OFF     (0)
 #define AR_SWITCH_ON      (1)
 #define AR_SWITCH_TRAINER (2)
@@ -48,5 +52,9 @@ extern void areplay_shutdown(void);
 extern void areplay_reset(int hard);
 extern void areplay_set_status(int status);
 extern int areplay_get_status(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -13,6 +13,10 @@
 #ifndef _SVP_H_
 #define _SVP_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "shared.h"
 #include "ssp16.h"
 
@@ -26,5 +30,9 @@ extern svp_t *svp;
 
 extern void svp_init(void);
 extern void svp_reset(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

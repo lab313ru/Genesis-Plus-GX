@@ -13,6 +13,10 @@
 #ifndef OSD_CPU_H
 #define OSD_CPU_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #undef TRUE
 #undef FALSE
 #define TRUE  1
@@ -43,5 +47,9 @@ typedef union {
 #endif
   UINT32 d;
 }  PAIR;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /* defined OSD_CPU_H */

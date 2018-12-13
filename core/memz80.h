@@ -42,6 +42,10 @@
 #ifndef _MEMZ80_H_
 #define _MEMZ80_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern unsigned char z80_memory_r(unsigned int address);
 extern void z80_memory_w(unsigned int address, unsigned char data);
 extern unsigned char z80_unused_port_r(unsigned int port);
@@ -56,5 +60,9 @@ extern unsigned char z80_m3_port_r(unsigned int port);
 extern void z80_m3_port_w(unsigned int port, unsigned char data);
 extern unsigned char z80_sg_port_r(unsigned int port);
 extern void z80_sg_port_w(unsigned int port, unsigned char data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _MEMZ80_H_ */

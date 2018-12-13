@@ -94,6 +94,9 @@
     <Filter Include="gui\vdp_ram">
       <UniqueIdentifier>{d268b114-681d-4146-b3c1-e56adb447a66}</UniqueIdentifier>
     </Filter>
+    <Filter Include="gui\hex_editor">
+      <UniqueIdentifier>{227ec897-c285-4e56-a733-5fdc4b368403}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\core\cd_hw\libchdr\src\bitstream.c">
@@ -407,6 +410,9 @@
     </ClCompile>
     <ClCompile Include="..\..\gui\vdp_ram_debug.cpp">
       <Filter>gui\vdp_ram</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gui\hex_editor.cpp">
+      <Filter>gui\hex_editor</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -787,6 +793,9 @@
     </ClInclude>
     <ClInclude Include="..\..\gui\vdp_ram_debug.h">
       <Filter>gui\vdp_ram</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\hex_editor.h">
+      <Filter>gui\hex_editor</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

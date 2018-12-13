@@ -3,9 +3,31 @@
 // Used by gui.rc
 //
 #define IDD_PLANEEXPLORER                101
+#define IDI_GENS                         122
+#define IDD_PROMPT                       140
 #define IDD_VDPRAM                       157
 #define IDD_VDP_REGISTERS_MODEREGISTERS  161
 #define IDD_VDP_REGISTERS_OTHERREGISTERS 162
+
+#define ID_CANCEL                       1025
+
+#define IDC_C_HEX_LINES                 42191
+#define IDC_C_HEX_TEXT                  42192
+#define IDC_C_HEX_GOTO                  42193
+#define IDC_C_HEX_DUMP                  42194
+#define IDC_C_HEX_COPY_NUMS             42195
+#define IDC_C_HEX_COPY_CHARS            42196
+#define IDC_C_HEX_COPY_AUTO             42197
+#define IDC_C_HEX_COPY_ADDRSESS         42198
+#define IDC_C_HEX_PASTE_NUMS            42200
+#define IDC_C_HEX_PASTE_CHARS           42201
+#define IDC_C_HEX_PASTE_AUTO            42202
+#define IDC_C_HEX_REGION                42300
+
+
+#define IDC_PROMPT_TEXT                 43000
+#define IDC_PROMPT_TEXT2                43001
+#define IDC_PROMPT_EDIT                 43005
 
 #define IDC_PLANEEXPLORER_MAIN          54001
 #define IDC_PLANEEXPLORER_TILEINFO      54002

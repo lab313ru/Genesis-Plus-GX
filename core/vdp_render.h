@@ -42,6 +42,11 @@
 #ifndef _RENDER_H_
 #define _RENDER_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /* 3:3:2 RGB */
 #if defined(USE_8BPP_RENDERING)
 #define PIXEL(r,g,b) (((r) << 5) | ((g) << 2) | (b))
@@ -139,5 +144,9 @@ extern void (*render_bg)(int line);
 extern void (*render_obj)(int line);
 extern void (*parse_satb)(int line);
 extern void (*update_bg_pattern_cache)(int index);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _RENDER_H_ */

@@ -1,6 +1,10 @@
 #ifndef _SHARED_H_
 #define _SHARED_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +37,10 @@
 #include "areplay.h"
 #include "svp.h"
 #include "state.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _SHARED_H_ */
 

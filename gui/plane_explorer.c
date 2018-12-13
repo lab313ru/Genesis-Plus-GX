@@ -8,7 +8,8 @@
 #include "shared.h"
 #include "vdp_ctrl.h"
 
-HWND PlaneExplorerHWnd = NULL;
+static HWND PlaneExplorerHWnd = NULL;
+static HANDLE hThread = NULL;
 
 /*********** PLANE EXPLORER ******/
 
@@ -674,7 +675,7 @@ BOOL CALLBACK PlaneExplorerDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LP
     return TRUE;
 }
 
-DWORD WINAPI ThreadProc(LPVOID lpParam)
+static DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
     MSG messages;
 
@@ -691,12 +692,14 @@ DWORD WINAPI ThreadProc(LPVOID lpParam)
 
 void create_plane_explorer()
 {
-    CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
+    hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
 }
 
 void destroy_plane_explorer()
 {
     DestroyWindow(PlaneExplorerHWnd);
+    TerminateThread(hThread, 0);
+    CloseHandle(hThread);
 }
 
 void update_plane_explorer()

@@ -43,6 +43,7 @@
 #include "eq.h"
 
 /* Global variables */
+config_t config;
 t_bitmap bitmap;
 t_snd snd;
 uint32 mcycles_vdp;

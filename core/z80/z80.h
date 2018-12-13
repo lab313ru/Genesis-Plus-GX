@@ -1,6 +1,10 @@
 #ifndef Z80_H_
 #define Z80_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "osd_cpu.h"
 
 enum
@@ -70,6 +74,10 @@ extern void z80_get_context (void *dst);
 extern void z80_set_context (void *src);
 extern void z80_set_irq_line(unsigned int state);
 extern void z80_set_nmi_line(unsigned int state);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

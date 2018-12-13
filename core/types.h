@@ -2,6 +2,10 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #undef uint8
 #undef uint16
 #undef uint32
@@ -31,5 +35,9 @@ typedef union
     } byte;
 
 } reg16_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _TYPES_H_ */

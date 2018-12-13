@@ -16,6 +16,10 @@
 #ifndef _H_YM2612_
 #define _H_YM2612_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
   YM2612_DISCRETE = 0,
   YM2612_INTEGRATED,
@@ -30,5 +34,9 @@ extern void YM2612Write(unsigned int a, unsigned int v);
 extern unsigned int YM2612Read(void);
 extern int YM2612LoadContext(unsigned char *state);
 extern int YM2612SaveContext(unsigned char *state);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _YM2612_ */

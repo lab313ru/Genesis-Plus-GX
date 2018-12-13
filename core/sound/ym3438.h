@@ -45,6 +45,10 @@
 #ifndef YM3438_H
 #define YM3438_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
     ym3438_mode_ym2612 = 0x01,      /* Enables YM2612 emulation (MD1, MD2 VA2) */
     ym3438_mode_readmode = 0x02,    /* Enables status read on any port (TeraDrive, MD1 VA7, MD2, etc) */
@@ -216,4 +220,9 @@ void OPN2_SetTestPin(ym3438_t *chip, Bit32u value);
 Bit32u OPN2_ReadTestPin(ym3438_t *chip);
 Bit32u OPN2_ReadIRQPin(ym3438_t *chip);
 Bit8u OPN2_Read(ym3438_t *chip, Bit32u port);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

@@ -40,6 +40,10 @@
 #ifndef _MEMBNK_H_
 #define _MEMBNK_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern unsigned int zbank_unused_r(unsigned int address);
 extern void zbank_unused_w(unsigned int address, unsigned int data);
 extern unsigned int zbank_lockup_r(unsigned int address);
@@ -49,10 +53,16 @@ extern void zbank_write_ctrl_io(unsigned int address, unsigned int data);
 extern unsigned int zbank_read_vdp(unsigned int address);
 extern void zbank_write_vdp(unsigned int address, unsigned int data);
 
-struct _zbank_memory_map
+typedef struct
 {
   unsigned int (*read)(unsigned int address);
   void (*write)(unsigned int address, unsigned int data);
-} zbank_memory_map[256];
+} _zbank_memory_map;
+
+extern _zbank_memory_map zbank_memory_map[256];
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _MEMBNK_H_ */
