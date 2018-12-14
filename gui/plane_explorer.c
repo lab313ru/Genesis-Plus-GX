@@ -692,7 +692,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
 void create_plane_explorer()
 {
-    hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
+    hThread = CreateThread(0, 0, ThreadProc, NULL, 0, NULL);
 }
 
 void destroy_plane_explorer()

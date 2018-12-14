@@ -40,10 +40,12 @@ static unsigned char read_cram_byte(unsigned char *array, unsigned int addr)
 
 static void write_cram_byte(HexRegion *array, unsigned int addr, unsigned char val)
 {
-    unsigned short vv = (read_cram_byte(array->Array, addr ^ array->Swap) << ((addr & 1) ? 8 : 0)) | (val << ((addr & 1) ? 0 : 8));
+    int is_odd = addr & 1;
+    unsigned int wpos = ((addr >> 1) << 1);
+    unsigned short vv = (read_cram_byte(array->Array, addr ^ array->Swap) << (is_odd ? 8 : 0)) | (val << (is_odd ? 0 : 8));
     vv = cram_16b_to_9b(vv);
-    array->Array[((addr >> 1) << 1) + 1] = (vv >> 8) & 0xFF;
-    array->Array[((addr >> 1) << 1) + 0] = (vv >> 0) & 0xFF;
+    array->Array[wpos + 1] = (vv >> 8) & 0xFF;
+    array->Array[wpos + 0] = (vv >> 0) & 0xFF;
 }
 
 HexRegion HexRegions[] = {
@@ -571,7 +573,7 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         HexEditorMenu = GetMenu(hDlg);
         HexRegionsMenu = CreatePopupMenu();
         InsertMenu(HexEditorMenu, GetMenuItemCount(HexEditorMenu) + 1, MF_BYPOSITION | MF_POPUP | MF_STRING,
-            (UINT)HexRegionsMenu, "&Region");
+            (UINT_PTR)HexRegionsMenu, "&Region");
         for (int i = 0; i < REGION_COUNT, HexRegions[i].Active; i++)
             InsertMenu(HexRegionsMenu, i,
             (Hex->CurrentRegion.Array == HexRegions[i].Array) ? MF_CHECKED : MF_UNCHECKED,
@@ -623,14 +625,14 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
             MoveToEx(Hex->DC, row * Hex->CellWidth + CellArea.left + GAP_CHECK, -1, NULL);
             HexSetColors(Hex, 0);
             sprintf(buf, "%2X", row);
-            TextOut(Hex->DC, 0, 0, buf, strlen(buf));
+            TextOut(Hex->DC, 0, 0, buf, (int)strlen(buf));
         }
         // LEFT HEADER, semi-dynamic.
         for (line = 0; line < Hex->OffsetVisibleTotal; line++) {
             MoveToEx(Hex->DC, Hex->Gap / 2, line * Hex->CellHeight + CellArea.top, NULL);
             HexSetColors(Hex, 0);
             sprintf(buf, "%06X:", Hex->OffsetVisibleFirst + line * RowCount + Hex->CurrentRegion.Offset);
-            TextOut(Hex->DC, 0, 0, buf, strlen(buf));
+            TextOut(Hex->DC, 0, 0, buf, (int)strlen(buf));
         }
         // RAM, dynamic.
         for (line = 0; line < Hex->OffsetVisibleTotal; line++) {
@@ -663,7 +665,7 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
                 {
                     sprintf(buf, "%02X", (unsigned char)(is_cram_region ? read_cram_byte(Hex->CurrentRegion.Array, carriage) : Hex->CurrentRegion.Array[carriage ^ Hex->CurrentRegion.Swap]));
                 }
-                TextOut(Hex->DC, 0, 0, buf, strlen(buf));
+                TextOut(Hex->DC, 0, 0, buf, (int)strlen(buf));
                 // Print chars on the right
                 if (Hex->TextView) {
                     MoveToEx(Hex->DC, row * Hex->FontWidth + TextArea.left + Hex->Gap / 2,
