@@ -668,10 +668,10 @@ static void scrollToAddress(unsigned int address)
             continue;
         }
 
-        int start_pos = SendMessage(listHwnd, EM_LINEINDEX, max(0, i->second - 15), 0);
-        int end_pos = SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
+        //int start_pos = SendMessage(listHwnd, EM_LINEINDEX, max(0, i->second - 15), 0);
+        //int end_pos = SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
 
-        SendMessage(listHwnd, EM_LINESCROLL, 0, start_pos);
+        SendMessage(listHwnd, WM_VSCROLL, MAKEWPARAM(SB_THUMBPOSITION, max(0, i->second - 15)), 0);
         break;
     }
 }
@@ -826,6 +826,9 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         resize_func();
         break;
     }
+    case WM_COMMAND:
+    {
+    } break;
     case WM_DESTROY:
     {
         KillTimer(hWnd, UPDATE_DISASM_TIMER);
@@ -861,6 +864,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
     openCapstone();
 
+    HACCEL hAccelTable = LoadAccelerators(dbg_wnd_hinst, MAKEINTRESOURCE(ACCELERATOR_RESOURCE_ID));
     MSG messages;
     HMODULE hRich = LoadLibrary("Riched32.dll");
 
@@ -878,6 +882,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
     while (GetMessage(&messages, disHwnd, 0, 0))
     {
+        if (!TranslateAccelerator(messages.hwnd, ))
         TranslateMessage(&messages);
         DispatchMessage(&messages);
     }
