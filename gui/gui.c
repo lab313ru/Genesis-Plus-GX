@@ -7,6 +7,10 @@
 HWND dbg_window = NULL;
 HINSTANCE dbg_wnd_hinst = NULL;
 
+static ACTCTX actCtx;
+static HANDLE hActCtx;
+static ULONG_PTR cookie;
+
 HINSTANCE GetHInstance()
 {
     MEMORY_BASIC_INFORMATION mbi;
@@ -14,6 +18,26 @@ HINSTANCE GetHInstance()
     VirtualQuery(GetHInstance, &mbi, sizeof(mbi));
 
     return (HINSTANCE)mbi.AllocationBase;
+}
+
+static void enable_visual_styles()
+{
+    ZeroMemory(&actCtx, sizeof(actCtx));
+    actCtx.cbSize = sizeof(actCtx);
+    actCtx.hModule = dbg_wnd_hinst;
+    actCtx.lpResourceName = MAKEINTRESOURCE(2);
+    actCtx.dwFlags = ACTCTX_FLAG_HMODULE_VALID | ACTCTX_FLAG_RESOURCE_NAME_VALID;
+
+    hActCtx = CreateActCtx(&actCtx);
+    if (hActCtx != INVALID_HANDLE_VALUE) {
+        ActivateActCtx(hActCtx, &cookie);
+    }
+}
+
+static void disable_visual_styles()
+{
+    DeactivateActCtx(0, cookie);
+    ReleaseActCtx(hActCtx);
 }
 
 const COLORREF normal_pal[] =
@@ -109,6 +133,8 @@ void run_gui()
 {
     dbg_wnd_hinst = GetHInstance();
 
+    enable_visual_styles();
+
     create_plane_explorer();
     create_vdp_ram_debug();
     create_hex_editor();
@@ -129,4 +155,6 @@ void stop_gui()
     destroy_vdp_ram_debug();
     destroy_hex_editor();
     destroy_disassembler();
+
+    disable_visual_styles();
 }

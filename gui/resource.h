@@ -3,12 +3,13 @@
 // Used by gui.rc
 //
 #define IDD_PLANEEXPLORER               101
-#define IDD_DISASSEMBLER                103
-#define IDI_GENS                        122
-#define IDD_PROMPT                      140
-#define IDD_VDPRAM                      157
-#define IDD_VDP_REGISTERS_MODEREGISTERS 161
-#define IDD_VDP_REGISTERS_OTHERREGISTERS 162
+#define IDD_DISASSEMBLER                102
+#define IDD_PROMPT                      104
+#define IDD_VDPRAM                      105
+#define IDD_VDP_REGISTERS_MODEREGISTERS 106
+#define IDD_VDP_REGISTERS_OTHERREGISTERS 107
+#define IDD_DISASM_REGS                 108
+#define ID_CANCEL                       1000
 #define IDC_STEP_INTO                   1001
 #define IDC_STEP_OVER                   1002
 #define IDC_STEP_OUT                    1003
@@ -32,26 +33,27 @@
 #define IDC_REG_A7                      1022
 #define IDC_REG_PC                      1023
 #define IDC_REG_SP                      1024
-#define IDC_REG_D0_L                      1025
-#define IDC_REG_D1_L                      1026
-#define IDC_REG_D2_L                      1027
-#define IDC_REG_D3_L                      1028
-#define IDC_REG_D4_L                      1029
-#define IDC_REG_D5_L                      1030
-#define IDC_REG_D6_L                      1031
-#define IDC_REG_D7_L                      1032
-#define IDC_REG_A0_L                      1033
-#define IDC_REG_A1_L                      1034
-#define IDC_REG_A2_L                      1035
-#define IDC_REG_A3_L                      1036
-#define IDC_REG_A4_L                      1037
-#define IDC_REG_A5_L                      1038
-#define IDC_REG_A6_L                      1039
-#define IDC_REG_A7_L                      1040
-#define IDC_REG_PC_L                      1041
-#define IDC_REG_SP_L                      1042
-
-#define ID_CANCEL                       1043
+#define IDC_REG_D0_L                    1025
+#define IDC_REG_D1_L                    1026
+#define IDC_REG_D2_L                    1027
+#define IDC_REG_D3_L                    1028
+#define IDC_REG_D4_L                    1029
+#define IDC_REG_D5_L                    1030
+#define IDC_REG_D6_L                    1031
+#define IDC_REG_D7_L                    1032
+#define IDC_REG_A0_L                    1033
+#define IDC_REG_A1_L                    1034
+#define IDC_REG_A2_L                    1035
+#define IDC_REG_A3_L                    1036
+#define IDC_REG_A4_L                    1037
+#define IDC_REG_A5_L                    1038
+#define IDC_REG_A6_L                    1039
+#define IDC_REG_A7_L                    1040
+#define IDC_REG_PC_L                    1041
+#define IDC_REG_SP_L                    1042
+#define IDC_DISASM_LIST                 1043
+#define IDC_REG_PPC_L                   1044
+#define IDC_REG_PPC                     1045
 #define IDC_VDP_REGISTERS_VSI           31032
 #define IDC_VDP_REGISTERS_HSI           31033
 #define IDC_VDP_REGISTERS_LCB           31034
@@ -167,14 +169,3 @@
 #define IDC_PLANEEXPLORER_WINDOW        54006
 #define IDC_PLANEEXPLORER_SPRITES       54007
 #define IDC_STATIC                      -1
-
-// Next default values for new objects
-// 
-#ifdef APSTUDIO_INVOKED
-#ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        105
-#define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1008
-#define _APS_NEXT_SYMED_VALUE           101
-#endif
-#endif

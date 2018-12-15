@@ -100,9 +100,6 @@
     <Filter Include="gui\disassembler">
       <UniqueIdentifier>{4a4a8f2f-5242-4d2a-ab98-b9cb1137721e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gui\disassembler\BabyGrid">
-      <UniqueIdentifier>{f8fed774-cdcf-4bed-8a29-4f81ea8b6d43}</UniqueIdentifier>
-    </Filter>
     <Filter Include="gui\edit_fields">
       <UniqueIdentifier>{6ce1585d-5253-448c-aee1-1ecde860dca4}</UniqueIdentifier>
     </Filter>
@@ -422,9 +419,6 @@
     </ClCompile>
     <ClCompile Include="..\..\gui\hex_editor.cpp">
       <Filter>gui\hex_editor</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gui\BabyGrid.cpp">
-      <Filter>gui\disassembler\BabyGrid</Filter>
     </ClCompile>
     <ClCompile Include="..\..\gui\disasembler.cpp">
       <Filter>gui\disassembler</Filter>
@@ -815,9 +809,6 @@
     <ClInclude Include="..\..\gui\hex_editor.h">
       <Filter>gui\hex_editor</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\gui\BabyGrid.h">
-      <Filter>gui\disassembler\BabyGrid</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\gui\disassembler.h">
       <Filter>gui\disassembler</Filter>
     </ClInclude>
@@ -831,6 +822,13 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\gui\gens2.ico" />
+    <Manifest Include="..\..\gui\gui.manifest">
+      <Filter>gui</Filter>
+    </Manifest>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\gui\gens2.ico">
+      <Filter>gui</Filter>
+    </Image>
   </ItemGroup>
 </Project>
