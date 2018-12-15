@@ -24,6 +24,7 @@ namespace cap
     #include "capstone/capstone.h"
 }
 
+#define UPDATE_DISASM_TIMER 1
 #define BYTES_BEFORE_PC 0x30
 
 static HANDLE hThread = NULL;
@@ -300,12 +301,16 @@ static DWORD CALLBACK EditStreamCallback(DWORD_PTR dwCookie, LPBYTE pbBuff, LONG
 
 static void set_listing_text()
 {
-    CHARRANGE cr;
-    cr.cpMin = 0;
+    CHARRANGE cr, cr_old;
+    cr.cpMin = -0;
     cr.cpMax = -1;
 
+    LockWindowUpdate(listHwnd);
+    SendMessage(listHwnd, EM_EXGETSEL, 0, (LPARAM)&cr_old);
     SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr);
     SendMessage(listHwnd, EM_REPLACESEL, 0, (LPARAM)cliptext.c_str());
+    SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
+    LockWindowUpdate(NULL);
 }
 
 static void set_listing_font(const char *strFont, int nSize)
@@ -461,6 +466,12 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     {
     case WM_INITDIALOG:
     {
+        SetTimer(hWnd, UPDATE_DISASM_TIMER, 500, NULL);
+    } break;
+    case WM_TIMER:
+    {
+        update_regs();
+        update_disasm_listing();
     } break;
     case WM_SIZE:
     {
@@ -468,12 +479,9 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         break;
     }
     case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
-    case UpdateMSG:
     {
-        update_regs();
-        update_disasm_listing();
+        KillTimer(hWnd, UPDATE_DISASM_TIMER);
+        PostQuitMessage(0);
     } break;
     }
 
@@ -515,7 +523,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
     listHwnd = GetDlgItem(disHwnd, IDC_DISASM_LIST);
     SetFocus(listHwnd);
-    set_listing_font("Liberation Mono", 8);
+    set_listing_font("Liberation Mono", 16);
 
     resize_func();
 
@@ -546,6 +554,5 @@ void destroy_disassembler()
 
 void update_disassembler()
 {
-    if (disHwnd)
-        SendMessage(disHwnd, UpdateMSG, 0, 0);
+
 }
