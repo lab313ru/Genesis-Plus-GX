@@ -7,6 +7,8 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <regex>
+#include <list>
 
 #include "gui.h"
 #include "disassembler.h"
@@ -26,6 +28,7 @@ namespace cap
 #define BYTES_BEFORE_PC 0x30
 #define DISASM_LISTING_BYTES 0x100
 #define ROM_CODE_START_ADDR 0x200
+#define DISASM_LISTING_BKGN (RGB(0xCC, 0xFF, 0xFF))
 
 static HANDLE hThread = NULL;
 
@@ -37,6 +40,243 @@ static bool pausedResumed = false;
 
 static std::string previousText;
 static unsigned int currentControlFocus;
+
+typedef struct {
+    std::regex pattern;
+    CHARFORMAT2 format;
+} highlight_rule_t;
+
+typedef struct {
+    int line_index;
+    COLORREF color;
+} extra_selection_t;
+
+static std::vector<highlight_rule_t> highlightingRules;
+static CHARFORMAT2 keywordFormat, addressFormat, hexValueFormat, lineAddrFormat;
+static std::list<extra_selection_t> extraSelections;
+
+static void init_highlighter()
+{
+    highlight_rule_t rule;
+
+    keywordFormat.cbSize = sizeof(CHARFORMAT2);
+    keywordFormat.crTextColor = RGB(0, 0, 0x8B); // darkBlue
+    keywordFormat.dwMask = CFM_BOLD | CFM_COLOR;
+    keywordFormat.dwEffects = CFE_BOLD;
+
+    std::list<std::string> keywordPatterns;
+    keywordPatterns.push_back("\\babcd\\b");
+    keywordPatterns.push_back("\\badd\\b");
+    keywordPatterns.push_back("\\badda\\b");
+    keywordPatterns.push_back("\\baddi\\b");
+    keywordPatterns.push_back("\\baddq\\b");
+    keywordPatterns.push_back("\\baddx\\b");
+    keywordPatterns.push_back("\\band\\b");
+    keywordPatterns.push_back("\\bandi\\b");
+    keywordPatterns.push_back("\\basl\\b");
+    keywordPatterns.push_back("\\basr\\b");
+    keywordPatterns.push_back("\\bbchg\\b");
+    keywordPatterns.push_back("\\bbclr\\b");
+    keywordPatterns.push_back("\\bbset\\b");
+    keywordPatterns.push_back("\\bbtst\\b");
+    keywordPatterns.push_back("\\bchk\\b");
+    keywordPatterns.push_back("\\bclr\\b");
+    keywordPatterns.push_back("\\bcmp\\b");
+    keywordPatterns.push_back("\\bcmpa\\b");
+    keywordPatterns.push_back("\\bcmpi\\b");
+    keywordPatterns.push_back("\\bcmpm\\b");
+    keywordPatterns.push_back("\\bdivs\\b");
+    keywordPatterns.push_back("\\bdivu\\b");
+    keywordPatterns.push_back("\\beor\\b");
+    keywordPatterns.push_back("\\beori\\b");
+    keywordPatterns.push_back("\\bexg\\b");
+    keywordPatterns.push_back("\\bext\\b");
+    keywordPatterns.push_back("\\bextb\\b");
+    keywordPatterns.push_back("\\billegal\\b");
+    keywordPatterns.push_back("\\blea\\b");
+    keywordPatterns.push_back("\\blink\\b");
+    keywordPatterns.push_back("\\blsl\\b");
+    keywordPatterns.push_back("\\blsr\\b");
+    keywordPatterns.push_back("\\bmove\\b");
+    keywordPatterns.push_back("\\bmovea\\b");
+    keywordPatterns.push_back("\\bmovem\\b");
+    keywordPatterns.push_back("\\bmovep\\b");
+    keywordPatterns.push_back("\\bmoveq\\b");
+    keywordPatterns.push_back("\\bmuls\\b");
+    keywordPatterns.push_back("\\bmulu\\b");
+    keywordPatterns.push_back("\\bnbcd\\b");
+    keywordPatterns.push_back("\\bneg\\b");
+    keywordPatterns.push_back("\\bnegx\\b");
+    keywordPatterns.push_back("\\bnop\\b");
+    keywordPatterns.push_back("\\bnot\\b");
+    keywordPatterns.push_back("\\bor\\b");
+    keywordPatterns.push_back("\\bori\\b");
+    keywordPatterns.push_back("\\breset\\b");
+    keywordPatterns.push_back("\\brol\\b");
+    keywordPatterns.push_back("\\bror\\b");
+    keywordPatterns.push_back("\\broxl\\b");
+    keywordPatterns.push_back("\\broxr\\b");
+    keywordPatterns.push_back("\\brte\\b");
+    keywordPatterns.push_back("\\brtr\\b");
+    keywordPatterns.push_back("\\brts\\b");
+    keywordPatterns.push_back("\\bsbcd\\b");
+    keywordPatterns.push_back("\\bscc\\b");
+    keywordPatterns.push_back("\\bsge\\b");
+    keywordPatterns.push_back("\\bsls\\b");
+    keywordPatterns.push_back("\\bspl\\b");
+    keywordPatterns.push_back("\\bscs\\b");
+    keywordPatterns.push_back("\\bsgt\\b");
+    keywordPatterns.push_back("\\bslt\\b");
+    keywordPatterns.push_back("\\bst\\b");
+    keywordPatterns.push_back("\\bseq\\b");
+    keywordPatterns.push_back("\\bshi\\b");
+    keywordPatterns.push_back("\\bsmi\\b");
+    keywordPatterns.push_back("\\bsvc\\b");
+    keywordPatterns.push_back("\\bsf\\b");
+    keywordPatterns.push_back("\\bsle\\b");
+    keywordPatterns.push_back("\\bsne\\b");
+    keywordPatterns.push_back("\\bsvs\\b");
+    keywordPatterns.push_back("\\bstop\\b");
+    keywordPatterns.push_back("\\bsub\\b");
+    keywordPatterns.push_back("\\bsuba\\b");
+    keywordPatterns.push_back("\\bsubi\\b");
+    keywordPatterns.push_back("\\bsubq\\b");
+    keywordPatterns.push_back("\\bsubx\\b");
+    keywordPatterns.push_back("\\bswap\\b");
+    keywordPatterns.push_back("\\btas\\b");
+    keywordPatterns.push_back("\\btrap\\b");
+    keywordPatterns.push_back("\\btrapv\\b");
+    keywordPatterns.push_back("\\btst\\b");
+    keywordPatterns.push_back("\\bunlk\\b");
+    keywordPatterns.push_back("\\bb\\b");
+    keywordPatterns.push_back("\\bw\\b");
+    keywordPatterns.push_back("\\bl\\b");
+    keywordPatterns.push_back("\\bs\\b");
+
+    keywordPatterns.push_back("\\bd0\\b");
+    keywordPatterns.push_back("\\bd1\\b");
+    keywordPatterns.push_back("\\bd2\\b");
+    keywordPatterns.push_back("\\bd3\\b");
+    keywordPatterns.push_back("\\bd4\\b");
+    keywordPatterns.push_back("\\bd5\\b");
+    keywordPatterns.push_back("\\bd6\\b");
+    keywordPatterns.push_back("\\bd7\\b");
+    keywordPatterns.push_back("\\ba0\\b");
+    keywordPatterns.push_back("\\ba1\\b");
+    keywordPatterns.push_back("\\ba2\\b");
+    keywordPatterns.push_back("\\ba3\\b");
+    keywordPatterns.push_back("\\ba4\\b");
+    keywordPatterns.push_back("\\ba5\\b");
+    keywordPatterns.push_back("\\ba6\\b");
+    keywordPatterns.push_back("\\ba7\\b");
+    keywordPatterns.push_back("\\bpc\\b");
+    keywordPatterns.push_back("\\bsr\\b");
+    keywordPatterns.push_back("\\bccr\\b");
+    keywordPatterns.push_back("\\bsp\\b");
+    keywordPatterns.push_back("\\busp\\b");
+    keywordPatterns.push_back("\\bssp\\b");
+    keywordPatterns.push_back("\\bisp\\b");
+    keywordPatterns.push_back("\\bbcc\\b");
+    keywordPatterns.push_back("\\bbhs\\b");
+    keywordPatterns.push_back("\\bbge\\b");
+    keywordPatterns.push_back("\\bbls\\b");
+    keywordPatterns.push_back("\\bbpl\\b");
+    keywordPatterns.push_back("\\bbcs\\b");
+    keywordPatterns.push_back("\\bblo\\b");
+    keywordPatterns.push_back("\\bbgt\\b");
+    keywordPatterns.push_back("\\bblt\\b");
+    keywordPatterns.push_back("\\bbeq\\b");
+    keywordPatterns.push_back("\\bbhi\\b");
+    keywordPatterns.push_back("\\bbmi\\b");
+    keywordPatterns.push_back("\\bbvc\\b");
+    keywordPatterns.push_back("\\bble\\b");
+    keywordPatterns.push_back("\\bbne\\b");
+    keywordPatterns.push_back("\\bbvs\\b");
+    keywordPatterns.push_back("\\bbra\\b");
+    keywordPatterns.push_back("\\bbsr\\b");
+    keywordPatterns.push_back("\\bdbra\\b");
+    keywordPatterns.push_back("\\bdbcc\\b");
+    keywordPatterns.push_back("\\bdbge\\b");
+    keywordPatterns.push_back("\\bdbls\\b");
+    keywordPatterns.push_back("\\bdbpl\\b");
+    keywordPatterns.push_back("\\bdbcs\\b");
+    keywordPatterns.push_back("\\bdbgt\\b");
+    keywordPatterns.push_back("\\bdblt\\b");
+    keywordPatterns.push_back("\\bdbt\\b");
+    keywordPatterns.push_back("\\bdbeq\\b");
+    keywordPatterns.push_back("\\bdbhi\\b");
+    keywordPatterns.push_back("\\bdbmi\\b");
+    keywordPatterns.push_back("\\bdbvc\\b");
+    keywordPatterns.push_back("\\bdbf\\b");
+    keywordPatterns.push_back("\\bdble\\b");
+    keywordPatterns.push_back("\\bdbne\\b");
+    keywordPatterns.push_back("\\bdbvs\\b");
+    keywordPatterns.push_back("\\bjmp\\b");
+    keywordPatterns.push_back("\\bjsr\\b");
+
+    for (std::string &pattern : keywordPatterns)
+    {
+        rule.pattern = std::regex(pattern);
+        rule.format = keywordFormat;
+        highlightingRules.push_back(rule);
+    }
+
+    addressFormat.cbSize = sizeof(CHARFORMAT2);
+    addressFormat.crTextColor = RGB(0x8B, 0, 0x8B); // darkMagenta
+    addressFormat.dwMask = CFM_BOLD | CFM_COLOR;
+    addressFormat.dwEffects = CFE_BOLD;
+    rule.pattern = std::regex("\\$\\b[A-Fa-f0-9]{1,8}\\b");
+    rule.format = addressFormat;
+    highlightingRules.push_back(rule);
+
+    hexValueFormat.cbSize = sizeof(CHARFORMAT2);
+    hexValueFormat.crTextColor = RGB(0, 0x64, 0); // darkGreen
+    hexValueFormat.dwMask = CFM_BOLD | CFM_COLOR;
+    hexValueFormat.dwEffects = CFE_BOLD;
+    rule.pattern = std::regex("\\#\\$\\b[A-Fa-f0-9]{1,8}\\b");
+    rule.format = hexValueFormat;
+    highlightingRules.push_back(rule);
+
+    lineAddrFormat.cbSize = sizeof(CHARFORMAT2);
+    lineAddrFormat.crTextColor = RGB(0, 0, 0); // black
+    lineAddrFormat.dwMask = CFM_BOLD | CFM_COLOR;
+    lineAddrFormat.dwEffects = CFE_BOLD;
+    rule.pattern = std::regex("^\\b[A-Fa-f0-9]{6}\\b");
+    rule.format = lineAddrFormat;
+    highlightingRules.push_back(rule);
+}
+
+static void clear_background_color()
+{
+	CHARRANGE cr;
+	cr.cpMin = INT_MAX;
+	cr.cpMax = INT_MAX;
+    SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr);
+
+    SendMessage(listHwnd, EM_SETBKGNDCOLOR, 0, DISASM_LISTING_BKGN);
+}
+
+static void set_selection_format(int start_pos, int length, const CHARFORMAT2 *cf)
+{
+    CHARRANGE cr_old;
+    SendMessage(listHwnd, EM_EXGETSEL, 0, (LPARAM)&cr_old);
+    SendMessage(listHwnd, EM_SETSEL, start_pos, start_pos + length);
+
+    SendMessage(listHwnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)cf);
+    SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
+}
+
+static void highligh_blocks()
+{
+    for (const highlight_rule_t &rule : highlightingRules)
+    {
+        for (std::sregex_iterator i = std::sregex_iterator(cliptext.cbegin(), cliptext.cend(), rule.pattern); i != std::sregex_iterator(); ++i)
+        {
+            std::smatch m = *i;
+            set_selection_format(m.position(0), m.length(0), &rule.format);
+        }
+    }
+}
 
 static void resize_func()
 {
@@ -106,6 +346,8 @@ static void resize_func()
     HWND hSPE = GetDlgItem(disHwnd, IDC_REG_SP);
     HWND hPPCL = GetDlgItem(disHwnd, IDC_REG_PPC_L);
     HWND hPPCE = GetDlgItem(disHwnd, IDC_REG_PPC);
+    HWND hSRL = GetDlgItem(disHwnd, IDC_REG_SR_L);
+    HWND hSRE = GetDlgItem(disHwnd, IDC_REG_SR);
 
     SetWindowPos(hPCL, NULL,
         left,
@@ -155,6 +397,22 @@ static void resize_func()
         SWP_NOZORDER | SWP_NOACTIVATE);
     InvalidateRect(hPPCE, NULL, FALSE);
 
+    SetWindowPos(hSRL, NULL,
+        left + widthL + 3 + widthE + 5,
+        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + (height + 5),
+        widthL,
+        height,
+        SWP_NOZORDER | SWP_NOACTIVATE);
+    InvalidateRect(hSRL, NULL, FALSE);
+
+    SetWindowPos(hSRE, NULL,
+        left + widthL + 3 + widthE + 5 + widthL + 3,
+        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + (height + 5),
+        widthE,
+        height,
+        SWP_NOZORDER | SWP_NOACTIVATE);
+    InvalidateRect(hSRE, NULL, FALSE);
+
     HWND F7 = GetDlgItem(disHwnd, IDC_STEP_INTO);
     HWND F8 = GetDlgItem(disHwnd, IDC_STEP_OVER);
     HWND F9 = GetDlgItem(disHwnd, IDC_RUN_PAUSE);
@@ -162,7 +420,7 @@ static void resize_func()
 
     SetWindowPos(F7, NULL,
         left,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + height + 10 + (height + 5),
+        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + height + 10 + (height + 5) * 2,
         r2.right,
         r2.bottom,
         SWP_NOZORDER | SWP_NOACTIVATE);
@@ -170,7 +428,7 @@ static void resize_func()
 
     SetWindowPos(F8, NULL,
         left + (r2.right + 2) * 1,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + height + 10 + (height + 5),
+        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + height + 10 + (height + 5) * 2,
         r2.right,
         r2.bottom,
         SWP_NOZORDER | SWP_NOACTIVATE);
@@ -178,7 +436,7 @@ static void resize_func()
 
     SetWindowPos(F9, NULL,
         left + (r2.right + 2) * 2,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + height + 10 + (height + 5),
+        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + height + 10 + (height + 5) * 2,
         r2.right,
         r2.bottom,
         SWP_NOZORDER | SWP_NOACTIVATE);
@@ -201,26 +459,56 @@ INT_PTR cpuWM_COMMAND(HWND hwnd, WPARAM wparam, LPARAM lparam)
         std::string newText = GetDlgItemString(hwnd, LOWORD(wparam));
         if (newText != previousText)
         {
+            dbg_req->data.regs_data.type = REG_TYPE_M68K;
             switch (LOWORD(wparam))
             {
             case IDC_REG_D0:
+                dbg_req->data.regs_data.data.regs_68k.values.d0 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_D1:
+                dbg_req->data.regs_data.data.regs_68k.values.d1 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_D2:
+                dbg_req->data.regs_data.data.regs_68k.values.d2 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_D3:
+                dbg_req->data.regs_data.data.regs_68k.values.d3 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_D4:
+                dbg_req->data.regs_data.data.regs_68k.values.d4 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_D5:
+                dbg_req->data.regs_data.data.regs_68k.values.d5 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_D6:
+                dbg_req->data.regs_data.data.regs_68k.values.d6 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_D7:
+                dbg_req->data.regs_data.data.regs_68k.values.d7 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_A0:
+                dbg_req->data.regs_data.data.regs_68k.values.a0 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_A1:
+                dbg_req->data.regs_data.data.regs_68k.values.a1 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_A2:
+                dbg_req->data.regs_data.data.regs_68k.values.a2 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_A3:
+                dbg_req->data.regs_data.data.regs_68k.values.a3 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_A4:
+                dbg_req->data.regs_data.data.regs_68k.values.a4 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_A5:
+                dbg_req->data.regs_data.data.regs_68k.values.a5 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_A6:
+                dbg_req->data.regs_data.data.regs_68k.values.a6 = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
             case IDC_REG_A7:
-                dbg_req->data.regs_data.type = REG_TYPE_M68K;
-                dbg_req->data.regs_data.data.regs_68k.array[LOWORD(wparam) - IDC_REG_D0] = GetDlgItemHex(hwnd, LOWORD(wparam));
+                dbg_req->data.regs_data.data.regs_68k.values.a7 = GetDlgItemHex(hwnd, LOWORD(wparam));
                 break;
             case IDC_REG_PC:
                 dbg_req->data.regs_data.data.regs_68k.values.pc = GetDlgItemHex(hwnd, LOWORD(wparam));
@@ -230,6 +518,9 @@ INT_PTR cpuWM_COMMAND(HWND hwnd, WPARAM wparam, LPARAM lparam)
                 break;
             case IDC_REG_PPC:
                 dbg_req->data.regs_data.data.regs_68k.values.ppc = GetDlgItemHex(hwnd, LOWORD(wparam));
+                break;
+            case IDC_REG_SR:
+                dbg_req->data.regs_data.data.regs_68k.values.sr = GetDlgItemHex(hwnd, LOWORD(wparam));
                 break;
             }
 
@@ -289,6 +580,8 @@ static void update_regs()
         UpdateDlgItemHex(disHwnd, IDC_REG_SP, 8, reg_vals->sp);
     if (currentControlFocus != IDC_REG_PPC)
         UpdateDlgItemHex(disHwnd, IDC_REG_PPC, 8, reg_vals->ppc);
+    if (currentControlFocus != IDC_REG_SR)
+        UpdateDlgItemHex(disHwnd, IDC_REG_SR, 4, reg_vals->sr);
 }
 
 static void set_listing_text()
@@ -297,17 +590,16 @@ static void set_listing_text()
     cr.cpMin = -0;
     cr.cpMax = -1;
 
-    LockWindowUpdate(listHwnd);
     SendMessage(listHwnd, EM_EXGETSEL, 0, (LPARAM)&cr_old);
     SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr);
     SendMessage(listHwnd, EM_REPLACESEL, 0, (LPARAM)cliptext.c_str());
     SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
-    LockWindowUpdate(NULL);
 }
 
 static void set_listing_font(const char *strFont, int nSize)
 {
-    // Setup char format
+    LockWindowUpdate(listHwnd);
+
 	CHARFORMAT cfFormat;
 	memset(&cfFormat, 0, sizeof(cfFormat));
 	cfFormat.cbSize = sizeof(cfFormat);
@@ -316,15 +608,35 @@ static void set_listing_font(const char *strFont, int nSize)
 	cfFormat.bPitchAndFamily = FIXED_PITCH | FF_DONTCARE;
 	cfFormat.yHeight = (nSize*1440)/72;
 	strcpy(cfFormat.szFaceName, strFont);
+    SendMessage(listHwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cfFormat);
 
-	// Set char format and goto end of text
-	CHARRANGE cr;
-	cr.cpMin = INT_MAX;
-	cr.cpMax = INT_MAX;
-	SendMessage(listHwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cfFormat);
-    SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr);
+	clear_background_color();
+    LockWindowUpdate(NULL);
+}
 
-    SendMessage(listHwnd, EM_SETBKGNDCOLOR, 0, RGB(0xCC, 0xFF, 0xFF));
+static void applyExtraSelection()
+{
+    clear_background_color();
+
+    for (extra_selection_t &selection : extraSelections)
+    {
+        int start_pos = SendMessage(listHwnd, EM_LINEINDEX, selection.line_index, 0);
+        int end_pos = SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
+
+        CHARFORMAT2 cf;
+        memset( &cf, 0, sizeof cf );
+        cf.cbSize = sizeof cf;
+        cf.dwMask = CFM_BACKCOLOR;
+        cf.crBackColor = selection.color;
+
+        set_selection_format(start_pos, end_pos, &cf);
+    }
+}
+
+static void clearExtraSelection()
+{
+    extraSelections.clear();
+    applyExtraSelection();
 }
 
 static void addExtraSelection(unsigned int address, COLORREF color)
@@ -332,27 +644,16 @@ static void addExtraSelection(unsigned int address, COLORREF color)
     std::map<unsigned int, int>::const_iterator i = linesMap.cbegin();
     while (i != linesMap.end())
     {
-        if (i->first == address)
+        if (i->first != address)
         {
-            int start_pos = SendMessage(listHwnd, EM_LINEINDEX, i->second, 0);
-            int end_pos = SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
-
-            LockWindowUpdate(listHwnd);
-            CHARRANGE cr_old;
-            SendMessage(listHwnd, EM_EXGETSEL, 0, (LPARAM)&cr_old);
-            SendMessage(listHwnd, EM_SETSEL, start_pos, start_pos + end_pos);
-            CHARFORMAT2 cf;
-            memset( &cf, 0, sizeof cf );
-            cf.cbSize = sizeof cf;
-            cf.dwMask = CFM_BACKCOLOR;
-            cf.crBackColor = color;
-            SendMessage(listHwnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
-            SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
-            LockWindowUpdate(NULL);
-            break;
+            ++i;
+            continue;
         }
 
-        ++i;
+        extra_selection_t extra = {i->second, color};
+        extraSelections.push_back(extra);
+        applyExtraSelection();
+        break;
     }
 }
 
@@ -361,21 +662,24 @@ static void scrollToAddress(unsigned int address)
     std::map<unsigned int, int>::const_iterator i = linesMap.cbegin();
     while (i != linesMap.end())
     {
-        if (i->first == address)
+        if (i->first != address)
         {
-            int start_pos = SendMessage(listHwnd, EM_LINEINDEX, max(0, i->second - 15), 0);
-            int end_pos = SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
-
-            SendMessage(listHwnd, EM_LINESCROLL, 0, start_pos);
-            break;
+            ++i;
+            continue;
         }
 
-        ++i;
+        int start_pos = SendMessage(listHwnd, EM_LINEINDEX, max(0, i->second - 15), 0);
+        int end_pos = SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
+
+        SendMessage(listHwnd, EM_LINESCROLL, 0, start_pos);
+        break;
     }
 }
 
 static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, size_t code_size)
 {
+    LockWindowUpdate(listHwnd);
+
     linesMap.clear();
     cliptext.clear();
 
@@ -420,7 +724,6 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
 
         std::string mnemonicString = temp.str();
         std::string operandsString(insn->op_str);
-        //operandsString.erase(std::remove_if(operandsString.begin(), operandsString.end(), isspace), operandsString.end());
 
         line.append(" ");
         line.append(mnemonicString);
@@ -435,7 +738,8 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
     cs_free(insn, 1);
 
     set_listing_text();
-    //clearExtraSelection();
+    highligh_blocks();
+    clearExtraSelection();
 
     addExtraSelection(pc, RGB(0x60, 0xD0, 0xFF));
     scrollToAddress(pc);
@@ -447,6 +751,8 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
     //    if (item.address == pc)
     //        changeExtraSelectionColor(pc, QColor(0xA0, 0xA0, 0xFF));
     //}
+
+    LockWindowUpdate(NULL);
 }
 
 static void update_disasm_listing(unsigned int pc)
@@ -565,6 +871,8 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
     listHwnd = GetDlgItem(disHwnd, IDC_DISASM_LIST);
     SetFocus(listHwnd);
     set_listing_font("Liberation Mono", 8);
+
+    init_highlighter();
 
     resize_func();
 

@@ -54,6 +54,8 @@
 #define IDC_DISASM_LIST                 1043
 #define IDC_REG_PPC_L                   1044
 #define IDC_REG_PPC                     1045
+#define IDC_REG_SR_L                    1046
+#define IDC_REG_SR                      1047
 #define IDC_VDP_REGISTERS_VSI           31032
 #define IDC_VDP_REGISTERS_HSI           31033
 #define IDC_VDP_REGISTERS_LCB           31034
