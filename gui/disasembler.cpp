@@ -25,6 +25,7 @@ namespace cap
 #define UPDATE_DISASM_TIMER 1
 #define BYTES_BEFORE_PC 0x30
 #define DISASM_LISTING_BYTES 0x100
+#define ROM_CODE_START_ADDR 0x200
 
 static HANDLE hThread = NULL;
 
@@ -288,8 +289,6 @@ static void update_regs()
         UpdateDlgItemHex(disHwnd, IDC_REG_SP, 8, reg_vals->sp);
     if (currentControlFocus != IDC_REG_PPC)
         UpdateDlgItemHex(disHwnd, IDC_REG_PPC, 8, reg_vals->ppc);
-
-    dbg_req->req_type = REQ_NO_REQUEST;
 }
 
 static void set_listing_text()
@@ -324,6 +323,8 @@ static void set_listing_font(const char *strFont, int nSize)
 	cr.cpMax = INT_MAX;
 	SendMessage(listHwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cfFormat);
     SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr);
+
+    SendMessage(listHwnd, EM_SETBKGNDCOLOR, 0, RGB(0xCC, 0xFF, 0xFF));
 }
 
 static void addExtraSelection(unsigned int address, COLORREF color)
@@ -336,13 +337,18 @@ static void addExtraSelection(unsigned int address, COLORREF color)
             int start_pos = SendMessage(listHwnd, EM_LINEINDEX, i->second, 0);
             int end_pos = SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
 
+            LockWindowUpdate(listHwnd);
+            CHARRANGE cr_old;
+            SendMessage(listHwnd, EM_EXGETSEL, 0, (LPARAM)&cr_old);
             SendMessage(listHwnd, EM_SETSEL, start_pos, start_pos + end_pos);
-            CHARFORMAT cf;
+            CHARFORMAT2 cf;
             memset( &cf, 0, sizeof cf );
             cf.cbSize = sizeof cf;
-            cf.dwMask = CFM_COLOR;
-            cf.crTextColor = color;
+            cf.dwMask = CFM_BACKCOLOR;
+            cf.crBackColor = color;
             SendMessage(listHwnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+            SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
+            LockWindowUpdate(NULL);
             break;
         }
 
@@ -360,11 +366,7 @@ static void scrollToAddress(unsigned int address)
             int start_pos = SendMessage(listHwnd, EM_LINEINDEX, max(0, i->second - 15), 0);
             int end_pos = SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
 
-            SendMessage(listHwnd, WM_VSCROLL, SB_BOTTOM, 0L);
-
             SendMessage(listHwnd, EM_LINESCROLL, 0, start_pos);
-            //setTextCursor(QTextCursor(document()->findBlockByLineNumber()));
-            //ensureCursorVisible();
             break;
         }
 
@@ -380,7 +382,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
     cap::cs_insn *insn = cap::cs_malloc(cs_handle);
 
     const uint8_t *code_ptr = (const uint8_t *)code;
-    uint64_t start_addr = max((int)(pc - BYTES_BEFORE_PC), (pc < 0xA00000) ? 0 : 0xFF0000);
+    uint64_t start_addr = max(pc - BYTES_BEFORE_PC, (pc < 0xA00000) ? ROM_CODE_START_ADDR : 0xFF0000);
     uint64_t address = start_addr;
 
     int lines = 0;
@@ -451,13 +453,14 @@ static void update_disasm_listing(unsigned int pc)
 {
     if (pc < 0xA00000)
     {
-        pc = max(pc - BYTES_BEFORE_PC, 0);
+        unsigned int real_pc = pc;
+        pc = max(pc - BYTES_BEFORE_PC, ROM_CODE_START_ADDR);
         dbg_req->data.mem_data.address = pc;
         dbg_req->data.mem_data.size = DISASM_LISTING_BYTES;
         dbg_req->req_type = REQ_READ_68K_ROM;
         send_dbg_request();
 
-        get_disasm_listing_pc(pc, dbg_req->data.mem_data.data.m68k_rom, dbg_req->data.mem_data.size);
+        get_disasm_listing_pc(real_pc, &dbg_req->data.mem_data.data.m68k_rom[pc], dbg_req->data.mem_data.size);
     }
 }
 
@@ -483,7 +486,8 @@ static void check_debugger_events()
     if (!is_debugger_active())
         return;
 
-    recv_dbg_event();
+    if (!recv_dbg_event(0))
+        return;
 
     debugger_event_t *dbg_event = &dbg_req->dbg_evt;
 
@@ -560,7 +564,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
     listHwnd = GetDlgItem(disHwnd, IDC_DISASM_LIST);
     SetFocus(listHwnd);
-    set_listing_font("Liberation Mono", 16);
+    set_listing_font("Liberation Mono", 8);
 
     resize_func();
 
