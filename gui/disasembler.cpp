@@ -15,8 +15,6 @@
 
 #include "resource.h"
 
-#include "shared.h"
-#include "m68k.h"
 #include "debug.h"
 
 namespace cap
@@ -26,6 +24,7 @@ namespace cap
 
 #define UPDATE_DISASM_TIMER 1
 #define BYTES_BEFORE_PC 0x30
+#define DISASM_LISTING_BYTES 0x100
 
 static HANDLE hThread = NULL;
 
@@ -33,6 +32,7 @@ static HWND disHwnd = NULL, listHwnd = NULL;
 static std::string cliptext;
 static cap::csh cs_handle;
 static std::map<unsigned int, int> linesMap;
+static bool pausedResumed = false;
 
 static std::string previousText;
 static unsigned int currentControlFocus;
@@ -218,18 +218,22 @@ INT_PTR cpuWM_COMMAND(HWND hwnd, WPARAM wparam, LPARAM lparam)
             case IDC_REG_A5:
             case IDC_REG_A6:
             case IDC_REG_A7:
-                m68k_set_reg((m68k_register_t)((int)M68K_REG_D0 + LOWORD(wparam) - IDC_REG_D0), GetDlgItemHex(hwnd, LOWORD(wparam)));
+                dbg_req->data.regs_data.type = REG_TYPE_M68K;
+                dbg_req->data.regs_data.data.regs_68k.array[LOWORD(wparam) - IDC_REG_D0] = GetDlgItemHex(hwnd, LOWORD(wparam));
                 break;
             case IDC_REG_PC:
-                m68k_set_reg(M68K_REG_PC, GetDlgItemHex(hwnd, LOWORD(wparam)));
+                dbg_req->data.regs_data.data.regs_68k.values.pc = GetDlgItemHex(hwnd, LOWORD(wparam));
                 break;
             case IDC_REG_SP:
-                m68k_set_reg(M68K_REG_SP, GetDlgItemHex(hwnd, LOWORD(wparam)));
+                dbg_req->data.regs_data.data.regs_68k.values.sp =  GetDlgItemHex(hwnd, LOWORD(wparam));
                 break;
             case IDC_REG_PPC:
-                m68k_set_reg(M68K_REG_PPC, GetDlgItemHex(hwnd, LOWORD(wparam)));
+                dbg_req->data.regs_data.data.regs_68k.values.ppc = GetDlgItemHex(hwnd, LOWORD(wparam));
                 break;
             }
+
+            dbg_req->req_type = REQ_SET_REGS;
+            send_dbg_request();
         }
     }
 
@@ -238,65 +242,54 @@ INT_PTR cpuWM_COMMAND(HWND hwnd, WPARAM wparam, LPARAM lparam)
 
 static void update_regs()
 {
+    dbg_req->data.regs_data.type = REG_TYPE_M68K;
+    dbg_req->req_type = REQ_GET_REGS;
+    send_dbg_request();
+
+    regs_68k_data_t *reg_vals = &dbg_req->data.regs_data.data.regs_68k.values;
+
     if (currentControlFocus != IDC_REG_D0)
-        UpdateDlgItemHex(disHwnd, IDC_REG_D0, 8, m68k_get_reg(M68K_REG_D0));
+        UpdateDlgItemHex(disHwnd, IDC_REG_D0, 8, reg_vals->d0);
     if (currentControlFocus != IDC_REG_D1)
-        UpdateDlgItemHex(disHwnd, IDC_REG_D1, 8, m68k_get_reg(M68K_REG_D1));
+        UpdateDlgItemHex(disHwnd, IDC_REG_D1, 8, reg_vals->d1);
     if (currentControlFocus != IDC_REG_D2)
-        UpdateDlgItemHex(disHwnd, IDC_REG_D2, 8, m68k_get_reg(M68K_REG_D2));
+        UpdateDlgItemHex(disHwnd, IDC_REG_D2, 8, reg_vals->d2);
     if (currentControlFocus != IDC_REG_D3)
-        UpdateDlgItemHex(disHwnd, IDC_REG_D3, 8, m68k_get_reg(M68K_REG_D3));
+        UpdateDlgItemHex(disHwnd, IDC_REG_D3, 8, reg_vals->d3);
     if (currentControlFocus != IDC_REG_D4)
-        UpdateDlgItemHex(disHwnd, IDC_REG_D4, 8, m68k_get_reg(M68K_REG_D4));
+        UpdateDlgItemHex(disHwnd, IDC_REG_D4, 8, reg_vals->d4);
     if (currentControlFocus != IDC_REG_D5)
-        UpdateDlgItemHex(disHwnd, IDC_REG_D5, 8, m68k_get_reg(M68K_REG_D5));
+        UpdateDlgItemHex(disHwnd, IDC_REG_D5, 8, reg_vals->d5);
     if (currentControlFocus != IDC_REG_D6)
-        UpdateDlgItemHex(disHwnd, IDC_REG_D6, 8, m68k_get_reg(M68K_REG_D6));
+        UpdateDlgItemHex(disHwnd, IDC_REG_D6, 8, reg_vals->d6);
     if (currentControlFocus != IDC_REG_D7)
-        UpdateDlgItemHex(disHwnd, IDC_REG_D7, 8, m68k_get_reg(M68K_REG_D7));
+        UpdateDlgItemHex(disHwnd, IDC_REG_D7, 8, reg_vals->d7);
 
     if (currentControlFocus != IDC_REG_A0)
-        UpdateDlgItemHex(disHwnd, IDC_REG_A0, 8, m68k_get_reg(M68K_REG_A0));
+        UpdateDlgItemHex(disHwnd, IDC_REG_A0, 8, reg_vals->a0);
     if (currentControlFocus != IDC_REG_A1)
-        UpdateDlgItemHex(disHwnd, IDC_REG_A1, 8, m68k_get_reg(M68K_REG_A1));
+        UpdateDlgItemHex(disHwnd, IDC_REG_A1, 8, reg_vals->a1);
     if (currentControlFocus != IDC_REG_A2)
-        UpdateDlgItemHex(disHwnd, IDC_REG_A2, 8, m68k_get_reg(M68K_REG_A2));
+        UpdateDlgItemHex(disHwnd, IDC_REG_A2, 8, reg_vals->a2);
     if (currentControlFocus != IDC_REG_A3)
-        UpdateDlgItemHex(disHwnd, IDC_REG_A3, 8, m68k_get_reg(M68K_REG_A3));
+        UpdateDlgItemHex(disHwnd, IDC_REG_A3, 8, reg_vals->a3);
     if (currentControlFocus != IDC_REG_A4)
-        UpdateDlgItemHex(disHwnd, IDC_REG_A4, 8, m68k_get_reg(M68K_REG_A4));
+        UpdateDlgItemHex(disHwnd, IDC_REG_A4, 8, reg_vals->a4);
     if (currentControlFocus != IDC_REG_A5)
-        UpdateDlgItemHex(disHwnd, IDC_REG_A5, 8, m68k_get_reg(M68K_REG_A5));
+        UpdateDlgItemHex(disHwnd, IDC_REG_A5, 8, reg_vals->a5);
     if (currentControlFocus != IDC_REG_A6)
-        UpdateDlgItemHex(disHwnd, IDC_REG_A6, 8, m68k_get_reg(M68K_REG_A6));
+        UpdateDlgItemHex(disHwnd, IDC_REG_A6, 8, reg_vals->a6);
     if (currentControlFocus != IDC_REG_A7)
-        UpdateDlgItemHex(disHwnd, IDC_REG_A7, 8, m68k_get_reg(M68K_REG_A7));
+        UpdateDlgItemHex(disHwnd, IDC_REG_A7, 8, reg_vals->a7);
+
     if (currentControlFocus != IDC_REG_PC)
-        UpdateDlgItemHex(disHwnd, IDC_REG_PC, 8, m68k_get_reg(M68K_REG_PC));
+        UpdateDlgItemHex(disHwnd, IDC_REG_PC, 8, reg_vals->pc);
     if (currentControlFocus != IDC_REG_SP)
-        UpdateDlgItemHex(disHwnd, IDC_REG_SP, 8, m68k_get_reg(M68K_REG_SP));
+        UpdateDlgItemHex(disHwnd, IDC_REG_SP, 8, reg_vals->sp);
     if (currentControlFocus != IDC_REG_PPC)
-        UpdateDlgItemHex(disHwnd, IDC_REG_PPC, 8, m68k_get_reg(M68K_REG_PPC));
-}
+        UpdateDlgItemHex(disHwnd, IDC_REG_PPC, 8, reg_vals->ppc);
 
-static DWORD CALLBACK EditStreamCallback(DWORD_PTR dwCookie, LPBYTE pbBuff, LONG cb, LONG *pcb)
-{
-    std::string *writes = (std::string *)dwCookie;	//cast as string
-
-    if (writes->size() < cb)
-    {
-        *pcb = (LONG)writes->size();
-        memcpy(pbBuff, (void *)writes->data(), *pcb);
-        writes->erase();
-    }
-    else
-    {
-        *pcb = cb;
-        memcpy(pbBuff, (void *)writes->data(), *pcb);
-        writes->erase(0, cb);
-    }
-
-    return 0;
+    dbg_req->req_type = REQ_NO_REQUEST;
 }
 
 static void set_listing_text()
@@ -387,7 +380,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
     cap::cs_insn *insn = cap::cs_malloc(cs_handle);
 
     const uint8_t *code_ptr = (const uint8_t *)code;
-    uint64_t start_addr = max((int)(pc - BYTES_BEFORE_PC), (pc < MAXROMSIZE) ? 0 : 0xFF0000);
+    uint64_t start_addr = max((int)(pc - BYTES_BEFORE_PC), (pc < 0xA00000) ? 0 : 0xFF0000);
     uint64_t address = start_addr;
 
     int lines = 0;
@@ -399,7 +392,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
         if (!ep_fixed && insn->address >= pc)
         {
             unsigned int pc_data_offset = pc;
-            pc_data_offset = (pc_data_offset < MAXROMSIZE) ? (pc_data_offset - start_addr) : ((pc_data_offset - start_addr) & 0xFFFF);
+            pc_data_offset = (pc_data_offset < 0xA00000) ? (pc_data_offset - start_addr) : ((pc_data_offset - start_addr) & 0xFFFF);
 
             code_ptr = (const uint8_t *)(&code[pc_data_offset]);
             address = pc;
@@ -454,10 +447,56 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
     //}
 }
 
-static void update_disasm_listing()
+static void update_disasm_listing(unsigned int pc)
 {
-    const unsigned char code[] = { 0x4E, 0x75, 0x4E, 0x75, 0x4E, 0x75, 0x4E, 0x75, 0x4E, 0x75, 0x4E, 0x75 };
-    get_disasm_listing_pc(0x200, code, sizeof(code));
+    if (pc < 0xA00000)
+    {
+        pc = max(pc - BYTES_BEFORE_PC, 0);
+        dbg_req->data.mem_data.address = pc;
+        dbg_req->data.mem_data.size = DISASM_LISTING_BYTES;
+        dbg_req->req_type = REQ_READ_68K_ROM;
+        send_dbg_request();
+
+        get_disasm_listing_pc(pc, dbg_req->data.mem_data.data.m68k_rom, dbg_req->data.mem_data.size);
+    }
+}
+
+static void do_game_started(unsigned int pc)
+{
+
+}
+
+static void do_game_paused(unsigned int pc)
+{
+    pausedResumed = true;
+    update_regs();
+    update_disasm_listing(pc);
+}
+
+static void do_game_stopped()
+{
+
+}
+
+static void check_debugger_events()
+{
+    if (!is_debugger_active())
+        return;
+
+    recv_dbg_event();
+
+    debugger_event_t *dbg_event = &dbg_req->dbg_evt;
+
+    switch (dbg_event->type)
+    {
+    case DBG_EVT_STARTED: do_game_started(dbg_event->pc); break;
+    case DBG_EVT_PAUSED: do_game_paused(dbg_event->pc); break;
+    case DBG_EVT_STOPPED: do_game_stopped(); break;
+    default:
+        break;
+    }
+
+    dbg_event->type = DBG_EVT_NO_EVENT;
 }
 
 LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -466,12 +505,11 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     {
     case WM_INITDIALOG:
     {
-        SetTimer(hWnd, UPDATE_DISASM_TIMER, 500, NULL);
+        SetTimer(hWnd, UPDATE_DISASM_TIMER, 10, NULL);
     } break;
     case WM_TIMER:
     {
-        update_regs();
-        update_disasm_listing();
+        check_debugger_events();
     } break;
     case WM_SIZE:
     {
@@ -511,10 +549,9 @@ static void closeCapstone()
 
 static DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
-    MSG messages;
-
     openCapstone();
 
+    MSG messages;
     HMODULE hRich = LoadLibrary("Riched32.dll");
 
     disHwnd = CreateDialog(dbg_wnd_hinst, MAKEINTRESOURCE(IDD_DISASSEMBLER), dbg_window, (DLGPROC)DisasseblerWndProc);
@@ -542,6 +579,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
 void create_disassembler()
 {
+    start_debugging();
     hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
 }
 
@@ -550,9 +588,11 @@ void destroy_disassembler()
     DestroyWindow(disHwnd);
     TerminateThread(hThread, 0);
     CloseHandle(hThread);
+    stop_debugging();
 }
 
 void update_disassembler()
 {
-
+    if (is_debugger_active())
+        handle_dbg_commands();
 }

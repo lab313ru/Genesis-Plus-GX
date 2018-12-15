@@ -274,7 +274,7 @@ void m68k_set_irq_delay(unsigned int int_level)
 
 void m68k_instr_callback()
 {
-    //process_debug();
+    process_breakpoints();
 }
 
 void m68k_run(unsigned int cycles) 

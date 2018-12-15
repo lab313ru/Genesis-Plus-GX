@@ -529,7 +529,7 @@ LRESULT CALLBACK HexGoToProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case IDOK: {
             GetDlgItemText(hDlg, IDC_PROMPT_EDIT, Str_Tmp, 10);
             int Address;
-            if ((strnicmp(Str_Tmp, "ff", 2) == 0) && (sscanf(Str_Tmp + 2, "%x", &Address)))
+            if ((_strnicmp(Str_Tmp, "ff", 2) == 0) && (sscanf(Str_Tmp + 2, "%x", &Address)))
                 HexGoToAddress(Hex, Address);
             EndDialog(hDlg, true);
             return true;
