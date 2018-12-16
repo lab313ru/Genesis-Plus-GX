@@ -1,6 +1,7 @@
 #include <Windows.h>
 #include <CommCtrl.h>
 #include <Richedit.h>
+#include <process.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -266,7 +267,7 @@ static void set_selection_format(int start_pos, int length, const CHARFORMAT2 *c
     SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
 }
 
-static void highligh_blocks()
+static void do_highlight_blocks(void *data)
 {
     for (const highlight_rule_t &rule : highlightingRules)
     {
@@ -276,6 +277,13 @@ static void highligh_blocks()
             set_selection_format(m.position(0), m.length(0), &rule.format);
         }
     }
+
+    _endthread();
+}
+
+static void highligh_blocks()
+{
+    _beginthread(do_highlight_blocks, 1024, NULL);
 }
 
 static void resize_func()
@@ -586,24 +594,28 @@ static void update_regs()
 
 static void set_listing_text()
 {
-    CHARRANGE cr, cr_old;
-    cr.cpMin = -0;
-    cr.cpMax = -1;
+    EnableScrollBar(listHwnd, SB_VERT, ESB_DISABLE_BOTH);
+    SendMessage(listHwnd, WM_SETTEXT, 0, (LPARAM)cliptext.c_str());
+    EnableScrollBar(listHwnd, SB_VERT, ESB_ENABLE_BOTH);
+    //CHARRANGE cr, cr_old;
+    //cr.cpMin = -0;
+    //cr.cpMax = -1;
 
-    SendMessage(listHwnd, EM_EXGETSEL, 0, (LPARAM)&cr_old);
-    SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr);
-    SendMessage(listHwnd, EM_REPLACESEL, 0, (LPARAM)cliptext.c_str());
-    SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
+    //SendMessage(listHwnd, EM_EXGETSEL, 0, (LPARAM)&cr_old);
+    //SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr);
+    //SendMessage(listHwnd, EM_REPLACESEL, 0, (LPARAM)cliptext.c_str());
+    //SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
 }
 
 static void set_listing_font(const char *strFont, int nSize)
 {
-    LockWindowUpdate(listHwnd);
+    //LockWindowUpdate(listHwnd);
 
 	CHARFORMAT cfFormat;
 	memset(&cfFormat, 0, sizeof(cfFormat));
 	cfFormat.cbSize = sizeof(cfFormat);
-	cfFormat.dwMask = CFM_CHARSET | CFM_FACE | CFM_SIZE;
+    cfFormat.crTextColor = RGB(0, 0, 0x8B);
+	cfFormat.dwMask = CFM_CHARSET | CFM_FACE | CFM_SIZE | CFM_COLOR;
 	cfFormat.bCharSet = ANSI_CHARSET;
 	cfFormat.bPitchAndFamily = FIXED_PITCH | FF_DONTCARE;
 	cfFormat.yHeight = (nSize*1440)/72;
@@ -611,7 +623,7 @@ static void set_listing_font(const char *strFont, int nSize)
     SendMessage(listHwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cfFormat);
 
 	clear_background_color();
-    LockWindowUpdate(NULL);
+    //LockWindowUpdate(NULL);
 }
 
 static void applyExtraSelection()
@@ -678,7 +690,7 @@ static void scrollToAddress(unsigned int address)
 
 static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, size_t code_size)
 {
-    LockWindowUpdate(listHwnd);
+    //LockWindowUpdate(listHwnd);
 
     linesMap.clear();
     cliptext.clear();
@@ -702,7 +714,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
 
             code_ptr = (const uint8_t *)(&code[pc_data_offset]);
             address = pc;
-            code_size = code_size - pc_data_offset;
+            code_size = (code_size >= pc_data_offset) ? (code_size - pc_data_offset) : code_size;
             ep_fixed = true;
             continue;
         }
@@ -752,7 +764,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
     //        changeExtraSelectionColor(pc, QColor(0xA0, 0xA0, 0xFF));
     //}
 
-    LockWindowUpdate(NULL);
+    //LockWindowUpdate(NULL);
 }
 
 static void update_disasm_listing(unsigned int pc)
@@ -780,6 +792,8 @@ static void do_game_paused(unsigned int pc)
     pausedResumed = true;
     update_regs();
     update_disasm_listing(pc);
+
+    SetForegroundWindow(disHwnd);
 }
 
 static void do_game_stopped()
@@ -828,6 +842,26 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     }
     case WM_COMMAND:
     {
+        switch (LOWORD(wParam))
+        {
+        case IDC_STEP_INTO:
+        case IDC_STEP_INTO_HK:
+            dbg_req->req_type = REQ_STEP_INTO;
+            send_dbg_request();
+            break;
+        case IDC_STEP_OVER:
+        case IDC_STEP_OVER_HK:
+            dbg_req->req_type = REQ_STEP_OVER;
+            send_dbg_request();
+            break;
+        case IDC_RUN_PAUSE:
+        case IDC_RUN_PAUSE_HK:
+            dbg_req->req_type = REQ_RESUME;
+            send_dbg_request();
+            break;
+        }
+
+        return TRUE;
     } break;
     case WM_DESTROY:
     {
@@ -876,15 +910,17 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
     SetFocus(listHwnd);
     set_listing_font("Liberation Mono", 8);
 
-    init_highlighter();
+    //init_highlighter();
 
     resize_func();
 
     while (GetMessage(&messages, disHwnd, 0, 0))
     {
-        if (!TranslateAccelerator(messages.hwnd, ))
-        TranslateMessage(&messages);
-        DispatchMessage(&messages);
+        if (!TranslateAccelerator(messages.hwnd, hAccelTable, &messages))
+        {
+            TranslateMessage(&messages);
+            DispatchMessage(&messages);
+        }
     }
 
     FreeLibrary(hRich);

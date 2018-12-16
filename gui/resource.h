@@ -2,13 +2,15 @@
 // Microsoft Visual C++ generated include file.
 // Used by gui.rc
 //
-#define IDD_PLANEEXPLORER               101
-#define IDD_DISASSEMBLER                102
-#define IDD_PROMPT                      104
-#define IDD_VDPRAM                      105
-#define IDD_VDP_REGISTERS_MODEREGISTERS 106
+#define IDD_PLANEEXPLORER                101
+#define IDD_DISASSEMBLER                 102
+#define IDD_PROMPT                       104
+#define IDD_VDPRAM                       105
+#define IDD_VDP_REGISTERS_MODEREGISTERS  106
 #define IDD_VDP_REGISTERS_OTHERREGISTERS 107
-#define IDD_DISASM_REGS                 108
+#define IDD_DISASM_REGS                  108
+#define ACCELERATOR_RESOURCE_ID          109
+
 #define ID_CANCEL                       1000
 #define IDC_STEP_INTO                   1001
 #define IDC_STEP_OVER                   1002
@@ -56,6 +58,9 @@
 #define IDC_REG_PPC                     1045
 #define IDC_REG_SR_L                    1046
 #define IDC_REG_SR                      1047
+#define IDC_STEP_INTO_HK                1048
+#define IDC_STEP_OVER_HK                1049
+#define IDC_RUN_PAUSE_HK                1050
 #define IDC_VDP_REGISTERS_VSI           31032
 #define IDC_VDP_REGISTERS_HSI           31033
 #define IDC_VDP_REGISTERS_LCB           31034
