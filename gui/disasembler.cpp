@@ -831,6 +831,22 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     {
     case WM_INITDIALOG:
     {
+        listHwnd = GetDlgItem(hWnd, IDC_DISASM_LIST);
+        SetFocus(listHwnd);
+        set_listing_font("Liberation Mono", 8);
+
+        CheckDlgButton(hWnd, IDC_EXEC_BPT, BST_CHECKED);
+        CheckDlgButton(hWnd, IDC_BPT_IS_READ, BST_CHECKED);
+        CheckDlgButton(hWnd, IDC_BPT_IS_WRITE, BST_CHECKED);
+
+        HWND bp_sizes = GetDlgItem(hWnd, IDC_BPT_SIZE);
+        SendMessage(bp_sizes, CB_ADDSTRING, 0, (LPARAM)"1");
+        SendMessage(bp_sizes, CB_ADDSTRING, 0, (LPARAM)"2");
+        SendMessage(bp_sizes, CB_ADDSTRING, 0, (LPARAM)"4");
+        SendMessage(bp_sizes, CB_SETCURSEL, 0, 0);
+
+        UpdateDlgItemHex(hWnd, IDC_BPT_ADDR, 6, ROM_CODE_START_ADDR);
+
         SetTimer(hWnd, DBG_EVENTS_TIMER, 10, NULL);
         SetTimer(hWnd, UPDATE_DISASM_TIMER, 2000, NULL);
     } break;
@@ -920,15 +936,11 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
     ShowWindow(disHwnd, SW_SHOW);
     UpdateWindow(disHwnd);
 
-    listHwnd = GetDlgItem(disHwnd, IDC_DISASM_LIST);
-    SetFocus(listHwnd);
-    set_listing_font("Liberation Mono", 8);
-
     init_highlighter();
 
     resize_func();
 
-    while (GetMessage(&messages, disHwnd, 0, 0))
+    while (GetMessage(&messages, NULL, 0, 0))
     {
         if (!TranslateAccelerator(disHwnd, hAccelTable, &messages))
         {
