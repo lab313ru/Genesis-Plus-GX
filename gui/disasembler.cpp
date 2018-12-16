@@ -33,6 +33,9 @@ namespace cap
 #define DISASM_LISTING_BYTES 0x100
 #define ROM_CODE_START_ADDR 0x200
 #define DISASM_LISTING_BKGN (RGB(0xCC, 0xFF, 0xFF))
+#define CURR_PC_COLOR (RGB(0x60, 0xD0, 0xFF))
+#define BPT_COLOR (RGB(0xFF, 0, 0))
+#define BPT_COLOR_PC (RGB(0xA0, 0xA0, 0xFF))
 
 static HANDLE hThread = NULL;
 
@@ -58,7 +61,7 @@ typedef struct {
 
 static std::vector<highlight_rule_t> highlightingRules;
 static CHARFORMAT2 keywordFormat, addressFormat, hexValueFormat, lineAddrFormat;
-static std::list<extra_selection_t> extraSelections;
+static std::vector<extra_selection_t> extraSelections;
 
 static void init_highlighter()
 {
@@ -284,7 +287,7 @@ static void highligh_blocks()
         for (std::sregex_iterator i = std::sregex_iterator(cliptext.cbegin(), cliptext.cend(), rule.pattern); i != std::sregex_iterator(); ++i)
         {
             std::smatch m = *i;
-            set_selection_format(m.position(0), m.length(0), &rule.format);
+            set_selection_format((int)m.position(0), (int)m.length(0), &rule.format);
         }
     }
     SendMessage(listHwnd, EM_HIDESELECTION, 0, 0);
@@ -632,8 +635,8 @@ static void applyExtraSelection()
     SendMessage(listHwnd, EM_HIDESELECTION, 1, 0);
     for (extra_selection_t &selection : extraSelections)
     {
-        int start_pos = SendMessage(listHwnd, EM_LINEINDEX, selection.line_index, 0);
-        int end_pos = SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
+        int start_pos = (int)SendMessage(listHwnd, EM_LINEINDEX, selection.line_index, 0);
+        int end_pos = (int)SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
 
         CHARFORMAT2 cf;
         memset(&cf, 0, sizeof cf);
@@ -650,6 +653,22 @@ static void clearExtraSelection()
 {
     extraSelections.clear();
     applyExtraSelection();
+}
+
+static unsigned int lineIndexToPc(int lineIndex)
+{
+    std::map<unsigned int, int>::const_iterator i = linesMap.cbegin();
+    while (i != linesMap.end())
+    {
+        if (i->second != lineIndex)
+        {
+            ++i;
+            continue;
+        }
+        return i->first;
+    }
+
+    return -1;
 }
 
 static void addExtraSelection(unsigned int address, COLORREF color)
@@ -670,6 +689,35 @@ static void addExtraSelection(unsigned int address, COLORREF color)
     }
 }
 
+static void changeExtraSelection(unsigned int address, COLORREF newColor)
+{
+    std::map<unsigned int, int>::const_iterator i = linesMap.cbegin();
+    while (i != linesMap.end())
+    {
+        if (i->first != address)
+        {
+            ++i;
+            continue;
+        }
+
+        for (int j = 0; j < extraSelections.size(); ++j)
+        {
+            extra_selection_t selection = extraSelections[j];
+
+            if (selection.line_index == i->second)
+            {
+                selection.color = newColor;
+                extraSelections.erase(extraSelections.begin() + j);
+                extraSelections.push_back(selection);
+                break;
+            }
+        }
+
+        applyExtraSelection();
+        break;
+    }
+}
+
 static void scrollToAddress(unsigned int address)
 {
     std::map<unsigned int, int>::const_iterator i = linesMap.cbegin();
@@ -681,12 +729,32 @@ static void scrollToAddress(unsigned int address)
             continue;
         }
 
-        //int start_pos = SendMessage(listHwnd, EM_LINEINDEX, max(0, i->second - 15), 0);
-        //int end_pos = SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
-
         SendMessage(listHwnd, WM_VSCROLL, MAKEWPARAM(SB_THUMBPOSITION, max(0, i->second - 15)), 0);
         break;
     }
+}
+
+static void update_disasm_with_bpt_list(unsigned int pc)
+{
+    SCROLLINFO si;
+
+    memset(&si, 0, sizeof(si));
+    si.cbSize = sizeof(si);
+    si.fMask = SIF_POS;
+    GetScrollInfo(listHwnd, SB_VERT, &si);
+
+    addExtraSelection(pc, CURR_PC_COLOR);
+
+    for (int i = 0; i < dbg_req->bpt_list.count; ++i)
+    {
+        bpt_data_t *bpt_data = &dbg_req->bpt_list.breaks[i];
+        addExtraSelection(bpt_data->address, BPT_COLOR);
+
+        if (bpt_data->address == pc)
+            changeExtraSelection(pc, BPT_COLOR_PC);
+    }
+
+    SetScrollInfo(listHwnd, SB_VERT, &si, TRUE);
 }
 
 static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, size_t code_size, int max_lines)
@@ -697,7 +765,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
     cap::cs_insn *insn = cap::cs_malloc(cs_handle);
 
     const uint8_t *code_ptr = (const uint8_t *)code;
-    uint64_t start_addr = max(pc - BYTES_BEFORE_PC, (pc < 0xA00000) ? ROM_CODE_START_ADDR : 0xFF0000);
+    uint64_t start_addr = max((int)pc - BYTES_BEFORE_PC, (pc < 0xA00000) ? ROM_CODE_START_ADDR : 0xFF0000);
     uint64_t address = start_addr;
 
     int lines = 0, pc_line = 0;
@@ -711,7 +779,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
             pc_line = lines;
 
             unsigned int pc_data_offset = pc;
-            pc_data_offset = (pc_data_offset < 0xA00000) ? (pc_data_offset - start_addr) : ((pc_data_offset - start_addr) & 0xFFFF);
+            pc_data_offset = (unsigned int)((pc_data_offset < 0xA00000) ? (pc_data_offset - start_addr) : ((pc_data_offset - start_addr) & 0xFFFF));
 
             code_ptr = (const uint8_t *)(&code[pc_data_offset]);
             address = pc;
@@ -724,7 +792,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
 
         std::string line;
 
-        std::string addrString = make_hex_string(6, insn->address);
+        std::string addrString = make_hex_string(6, (unsigned int)insn->address);
         line.append(addrString);
 
         std::string mnemo(insn->mnemonic);
@@ -754,16 +822,8 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
     highligh_blocks();
     clearExtraSelection();
 
-    addExtraSelection(pc, RGB(0x60, 0xD0, 0xFF));
+    update_disasm_with_bpt_list(pc);
     scrollToAddress(pc);
-
-    //foreach (const BreakpointItem &item, bptList)
-    //{
-    //    addExtraSelection(item.address, Qt::red);
-
-    //    if (item.address == pc)
-    //        changeExtraSelectionColor(pc, QColor(0xA0, 0xA0, 0xFF));
-    //}
 }
 
 static void update_disasm_listing(unsigned int pc)
@@ -781,9 +841,18 @@ static void update_disasm_listing(unsigned int pc)
     }
 }
 
+static void update_bpt_list()
+{
+    dbg_req->req_type = REQ_LIST_BREAKS;
+    send_dbg_request();
+
+    ListView_SetItemCount(GetDlgItem(disHwnd, IDC_BPT_LIST), dbg_req->bpt_list.count);
+}
+
 static void update_dbg_window_info()
 {
     update_regs();
+    update_bpt_list();
     update_disasm_listing(last_pc);
 }
 
@@ -847,6 +916,21 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
         UpdateDlgItemHex(hWnd, IDC_BPT_ADDR, 6, ROM_CODE_START_ADDR);
 
+        HWND bpt_list = GetDlgItem(hWnd, IDC_BPT_LIST);
+        SendMessage(bpt_list, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_FULLROWSELECT);
+        LV_COLUMN column;
+        memset(&column, 0, sizeof(column));
+        column.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+        column.pszText = (LPSTR)"Address";
+        column.cx = 0x42;
+        SendMessage(bpt_list, LVM_INSERTCOLUMN, 0, (LPARAM)&column);
+        column.cx = 0x20;
+        column.pszText = (LPSTR)"Size";
+        SendMessage(bpt_list, LVM_INSERTCOLUMN, 1, (LPARAM)&column);
+        column.cx = 0x52;
+        column.pszText = (LPSTR)"Type";
+        SendMessage(bpt_list, LVM_INSERTCOLUMN, 2, (LPARAM)&column);
+
         SetTimer(hWnd, DBG_EVENTS_TIMER, 10, NULL);
         SetTimer(hWnd, UPDATE_DISASM_TIMER, 2000, NULL);
     } break;
@@ -868,6 +952,41 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         resize_func();
         break;
     }
+    case WM_NOTIFY:
+    {
+        switch (((LPNMHDR)lParam)->code)
+        {
+        case LVN_GETDISPINFO:
+        {
+            NMLVDISPINFO *plvdi = (NMLVDISPINFO *)lParam;
+
+            char tmp[32];
+
+            bpt_data_t *bpt_data = &dbg_req->bpt_list.breaks[plvdi->item.iItem];
+            switch (plvdi->item.iSubItem)
+            {
+            case 0: // Address
+            {
+                snprintf(tmp, sizeof(tmp), "%.6X", bpt_data->address);
+                plvdi->item.pszText = tmp;
+            } break;
+            case 1: // Size
+            {
+                snprintf(tmp, sizeof(tmp), "%d", bpt_data->width);
+                plvdi->item.pszText = tmp;
+            } break;
+            case 2: // Type
+            {
+                snprintf(tmp, sizeof(tmp), "%s", bpt_type_string[bpt_data->type]);
+                plvdi->item.pszText = tmp;
+            } break;
+            default:
+                break;
+            }
+            return TRUE;
+        } break;
+        }
+    } break;
     case WM_COMMAND:
     {
         switch (LOWORD(wParam))
@@ -888,6 +1007,77 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             send_dbg_request();
             pausedResumed = !pausedResumed;
             break;
+        case IDC_ADD_BREAK_POS_HK:
+        {
+            int lineIndex = (int)SendMessage(listHwnd, EM_LINEFROMCHAR, -1, 0);
+            unsigned int address = lineIndexToPc(lineIndex);
+
+            bool was_deleted = false;
+            for (int i = 0; i < dbg_req->bpt_list.count; ++i)
+            {
+                if (address == dbg_req->bpt_list.breaks[i].address)
+                {
+                    bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+                    bpt_data->address = address;
+                    bpt_data->type = BPT_M68K_E;
+                    bpt_data->width = 1;
+                    dbg_req->req_type = REQ_DEL_BREAK;
+                    was_deleted = true;
+                    break;
+                }
+            }
+
+            if (!was_deleted)
+            {
+                bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+                bpt_data->address = address;
+                bpt_data->type = BPT_M68K_E;
+                bpt_data->width = 1;
+                dbg_req->req_type = REQ_ADD_BREAK;
+            }
+
+            send_dbg_request();
+            update_dbg_window_info();
+        } break;
+        case IDC_ADD_BREAK:
+        {
+            bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+            bpt_data->address = GetDlgItemHex(disHwnd, IDC_BPT_ADDR);
+            int bpt_type = (int)SendMessage(GetDlgItem(disHwnd, IDC_BPT_SIZE), CB_GETCURSEL, 0, 0);
+
+            switch (bpt_type)
+            {
+            case 1: bpt_data->width = 2; break;
+            case 2: bpt_data->width = 4; break;
+            default: bpt_data->width = 1; break;
+            }
+
+            bpt_data->type = (bpt_type_t)(IsDlgButtonChecked(disHwnd, IDC_EXEC_BPT) ? BPT_M68K_E :
+                ((IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ) ? BPT_M68K_R : 0) | (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE) ? BPT_M68K_W : 0)));
+            dbg_req->req_type = REQ_ADD_BREAK;
+            send_dbg_request();
+            update_dbg_window_info();
+        } break;
+        case IDC_DEL_BREAK:
+        {
+            bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+            int index = ListView_GetNextItem(GetDlgItem(disHwnd, IDC_BPT_LIST), -1, LVNI_SELECTED);
+
+            if (index != -1)
+            {
+                bpt_data_t *bpt_item = &dbg_req->bpt_list.breaks[index];
+
+                bpt_data->address = bpt_item->address;
+                bpt_data->type = bpt_item->type;
+                dbg_req->req_type = REQ_DEL_BREAK;
+                send_dbg_request();
+                update_dbg_window_info();
+            }
+        } break;
+        case IDC_CLEAR_BREAKS:
+            dbg_req->req_type = REQ_CLEAR_BREAKS;
+            send_dbg_request();
+            update_dbg_window_info();
         }
 
         return TRUE;
@@ -897,6 +1087,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         KillTimer(hWnd, UPDATE_DISASM_TIMER);
         KillTimer(hWnd, DBG_EVENTS_TIMER);
         PostQuitMessage(0);
+        EndDialog(hWnd, 0);
     } break;
     }
 

@@ -72,6 +72,7 @@
 #define IDC_ADD_BREAK                   1057
 #define IDC_DEL_BREAK                   1058
 #define IDC_CLEAR_BREAKS                1059
+#define IDC_ADD_BREAK_POS_HK            1060
 #define IDC_VDP_REGISTERS_VSI           31032
 #define IDC_VDP_REGISTERS_HSI           31033
 #define IDC_VDP_REGISTERS_LCB           31034
