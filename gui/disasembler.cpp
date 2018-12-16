@@ -22,11 +22,13 @@
 
 namespace cap
 {
-    #include "capstone/capstone.h"
+#include "capstone/capstone.h"
 }
 
 #define UPDATE_DISASM_TIMER 1
 #define BYTES_BEFORE_PC 0x30
+#define LINES_BEFORE_PC 15
+#define LINES_MAX 25
 #define DISASM_LISTING_BYTES 0x100
 #define ROM_CODE_START_ADDR 0x200
 #define DISASM_LISTING_BKGN (RGB(0xCC, 0xFF, 0xFF))
@@ -249,12 +251,16 @@ static void init_highlighter()
 
 static void clear_background_color()
 {
-	CHARRANGE cr;
-	cr.cpMin = INT_MAX;
-	cr.cpMax = INT_MAX;
+    CHARRANGE cr, cr_old;
+    cr.cpMin = INT_MAX;
+    cr.cpMax = INT_MAX;
+    SendMessage(listHwnd, EM_HIDESELECTION, 1, 0);
+    SendMessage(listHwnd, EM_EXGETSEL, 0, (LPARAM)&cr_old);
     SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr);
 
     SendMessage(listHwnd, EM_SETBKGNDCOLOR, 0, DISASM_LISTING_BKGN);
+    SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
+    SendMessage(listHwnd, EM_HIDESELECTION, 0, 0);
 }
 
 static void set_selection_format(int start_pos, int length, const CHARFORMAT2 *cf)
@@ -267,8 +273,10 @@ static void set_selection_format(int start_pos, int length, const CHARFORMAT2 *c
     SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
 }
 
-static void do_highlight_blocks(void *data)
+static void highligh_blocks()
 {
+    LockWindowUpdate(listHwnd);
+    SendMessage(listHwnd, EM_HIDESELECTION, 1, 0);
     for (const highlight_rule_t &rule : highlightingRules)
     {
         for (std::sregex_iterator i = std::sregex_iterator(cliptext.cbegin(), cliptext.cend(), rule.pattern); i != std::sregex_iterator(); ++i)
@@ -277,13 +285,8 @@ static void do_highlight_blocks(void *data)
             set_selection_format(m.position(0), m.length(0), &rule.format);
         }
     }
-
-    _endthread();
-}
-
-static void highligh_blocks()
-{
-    _beginthread(do_highlight_blocks, 1024, NULL);
+    SendMessage(listHwnd, EM_HIDESELECTION, 0, 0);
+    LockWindowUpdate(NULL);
 }
 
 static void resize_func()
@@ -522,7 +525,7 @@ INT_PTR cpuWM_COMMAND(HWND hwnd, WPARAM wparam, LPARAM lparam)
                 dbg_req->data.regs_data.data.regs_68k.values.pc = GetDlgItemHex(hwnd, LOWORD(wparam));
                 break;
             case IDC_REG_SP:
-                dbg_req->data.regs_data.data.regs_68k.values.sp =  GetDlgItemHex(hwnd, LOWORD(wparam));
+                dbg_req->data.regs_data.data.regs_68k.values.sp = GetDlgItemHex(hwnd, LOWORD(wparam));
                 break;
             case IDC_REG_PPC:
                 dbg_req->data.regs_data.data.regs_68k.values.ppc = GetDlgItemHex(hwnd, LOWORD(wparam));
@@ -594,55 +597,49 @@ static void update_regs()
 
 static void set_listing_text()
 {
-    EnableScrollBar(listHwnd, SB_VERT, ESB_DISABLE_BOTH);
+    CHARRANGE cr_old;
+    SendMessage(listHwnd, EM_HIDESELECTION, 1, 0);
+    SendMessage(listHwnd, EM_EXGETSEL, 0, (LPARAM)&cr_old);
     SendMessage(listHwnd, WM_SETTEXT, 0, (LPARAM)cliptext.c_str());
-    EnableScrollBar(listHwnd, SB_VERT, ESB_ENABLE_BOTH);
-    //CHARRANGE cr, cr_old;
-    //cr.cpMin = -0;
-    //cr.cpMax = -1;
-
-    //SendMessage(listHwnd, EM_EXGETSEL, 0, (LPARAM)&cr_old);
-    //SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr);
-    //SendMessage(listHwnd, EM_REPLACESEL, 0, (LPARAM)cliptext.c_str());
-    //SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
+    SendMessage(listHwnd, EM_EXSETSEL, 0, (LPARAM)&cr_old);
+    SendMessage(listHwnd, EM_HIDESELECTION, 0, 0);
 }
 
 static void set_listing_font(const char *strFont, int nSize)
 {
-    //LockWindowUpdate(listHwnd);
-
-	CHARFORMAT cfFormat;
-	memset(&cfFormat, 0, sizeof(cfFormat));
-	cfFormat.cbSize = sizeof(cfFormat);
+    CHARFORMAT cfFormat;
+    memset(&cfFormat, 0, sizeof(cfFormat));
+    cfFormat.cbSize = sizeof(cfFormat);
     cfFormat.crTextColor = RGB(0, 0, 0x8B);
-	cfFormat.dwMask = CFM_CHARSET | CFM_FACE | CFM_SIZE | CFM_COLOR;
-	cfFormat.bCharSet = ANSI_CHARSET;
-	cfFormat.bPitchAndFamily = FIXED_PITCH | FF_DONTCARE;
-	cfFormat.yHeight = (nSize*1440)/72;
-	strcpy(cfFormat.szFaceName, strFont);
+    cfFormat.dwMask = CFM_CHARSET | CFM_FACE | CFM_SIZE | CFM_COLOR;
+    cfFormat.bCharSet = ANSI_CHARSET;
+    cfFormat.bPitchAndFamily = FIXED_PITCH | FF_DONTCARE;
+    cfFormat.yHeight = (nSize * 1440) / 72;
+    strcpy(cfFormat.szFaceName, strFont);
     SendMessage(listHwnd, EM_SETCHARFORMAT, SCF_ALL, (LPARAM)&cfFormat);
 
-	clear_background_color();
-    //LockWindowUpdate(NULL);
+    clear_background_color();
 }
 
 static void applyExtraSelection()
 {
     clear_background_color();
 
+    SendMessage(listHwnd, EM_HIDESELECTION, 1, 0);
     for (extra_selection_t &selection : extraSelections)
     {
         int start_pos = SendMessage(listHwnd, EM_LINEINDEX, selection.line_index, 0);
         int end_pos = SendMessage(listHwnd, EM_LINELENGTH, start_pos, 0);
 
         CHARFORMAT2 cf;
-        memset( &cf, 0, sizeof cf );
+        memset(&cf, 0, sizeof cf);
         cf.cbSize = sizeof cf;
         cf.dwMask = CFM_BACKCOLOR;
         cf.crBackColor = selection.color;
 
         set_selection_format(start_pos, end_pos, &cf);
     }
+    SendMessage(listHwnd, EM_HIDESELECTION, 0, 0);
 }
 
 static void clearExtraSelection()
@@ -662,7 +659,7 @@ static void addExtraSelection(unsigned int address, COLORREF color)
             continue;
         }
 
-        extra_selection_t extra = {i->second, color};
+        extra_selection_t extra = { i->second, color };
         extraSelections.push_back(extra);
         applyExtraSelection();
         break;
@@ -688,10 +685,8 @@ static void scrollToAddress(unsigned int address)
     }
 }
 
-static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, size_t code_size)
+static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, size_t code_size, int max_lines)
 {
-    //LockWindowUpdate(listHwnd);
-
     linesMap.clear();
     cliptext.clear();
 
@@ -701,14 +696,16 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
     uint64_t start_addr = max(pc - BYTES_BEFORE_PC, (pc < 0xA00000) ? ROM_CODE_START_ADDR : 0xFF0000);
     uint64_t address = start_addr;
 
-    int lines = 0;
+    int lines = 0, pc_line = 0;
 
     bool ep_fixed = false;
 
-    while (code_size && cs_disasm_iter(cs_handle, &code_ptr, &code_size, &address, insn))
+    while (lines < max_lines && code_size && cs_disasm_iter(cs_handle, &code_ptr, &code_size, &address, insn))
     {
         if (!ep_fixed && insn->address >= pc)
         {
+            pc_line = lines;
+
             unsigned int pc_data_offset = pc;
             pc_data_offset = (pc_data_offset < 0xA00000) ? (pc_data_offset - start_addr) : ((pc_data_offset - start_addr) & 0xFFFF);
 
@@ -730,7 +727,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
 
         std::ostringstream temp;
         temp << mnemo << " ";
-        
+
         for (int i = 0; i < (7 - mnemo.length()); ++i)
             temp << " ";
 
@@ -763,8 +760,6 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
     //    if (item.address == pc)
     //        changeExtraSelectionColor(pc, QColor(0xA0, 0xA0, 0xFF));
     //}
-
-    //LockWindowUpdate(NULL);
 }
 
 static void update_disasm_listing(unsigned int pc)
@@ -778,13 +773,12 @@ static void update_disasm_listing(unsigned int pc)
         dbg_req->req_type = REQ_READ_68K_ROM;
         send_dbg_request();
 
-        get_disasm_listing_pc(real_pc, &dbg_req->data.mem_data.data.m68k_rom[pc], dbg_req->data.mem_data.size);
+        get_disasm_listing_pc(real_pc, &dbg_req->data.mem_data.data.m68k_rom[pc], dbg_req->data.mem_data.size, LINES_MAX);
     }
 }
 
 static void do_game_started(unsigned int pc)
 {
-
 }
 
 static void do_game_paused(unsigned int pc)
@@ -798,7 +792,6 @@ static void do_game_paused(unsigned int pc)
 
 static void do_game_stopped()
 {
-
 }
 
 static void check_debugger_events()
@@ -856,8 +849,9 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             break;
         case IDC_RUN_PAUSE:
         case IDC_RUN_PAUSE_HK:
-            dbg_req->req_type = REQ_RESUME;
+            dbg_req->req_type = pausedResumed ? REQ_RESUME : REQ_PAUSE;
             send_dbg_request();
+            pausedResumed = !pausedResumed;
             break;
         }
 
@@ -879,7 +873,7 @@ static bool openCapstone()
 
     cap::cs_opt_skipdata skipdata;
     skipdata.callback = NULL;
-    skipdata.mnemonic = "db";
+    skipdata.mnemonic = "dc.b";
     skipdata.user_data = NULL;
 
     cap::cs_option(cs_handle, cap::CS_OPT_SKIPDATA_SETUP, (size_t)&skipdata);
@@ -910,13 +904,13 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
     SetFocus(listHwnd);
     set_listing_font("Liberation Mono", 8);
 
-    //init_highlighter();
+    init_highlighter();
 
     resize_func();
 
     while (GetMessage(&messages, disHwnd, 0, 0))
     {
-        if (!TranslateAccelerator(messages.hwnd, hAccelTable, &messages))
+        if (!TranslateAccelerator(disHwnd, hAccelTable, &messages))
         {
             TranslateMessage(&messages);
             DispatchMessage(&messages);
