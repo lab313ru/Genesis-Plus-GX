@@ -837,7 +837,7 @@ INT_PTR msgRegistersWM_INITDIALOG(HWND hDlg, WPARAM wparam, LPARAM lparam)
     return TRUE;
 }
 
-void Redraw_VDP_View()
+static void redraw_vdp_view()
 {
     if (!VDPRamHWnd) return;
 
@@ -997,6 +997,7 @@ LRESULT CALLBACK ButtonsProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
                 FILE *in = fopen(fname, "rb");
                 fread(cram, 1, sizeof(cram), in);
                 fclose(in);
+                redraw_vdp_view();
             }
             return FALSE;
         } break;
@@ -1064,6 +1065,7 @@ LRESULT CALLBACK ButtonsProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
 				((char*)&cram)[(VDP_PAL_COLORS * 2 + i) * 2 + 0] = (w >> 0) & 0xFF;
 				((char*)&cram)[(VDP_PAL_COLORS * 2 + i) * 2 + 1] = (w >> 8) & 0xFF;
 			}
+            redraw_vdp_view();
 
 			return FALSE;
 		} break;
@@ -1088,19 +1090,20 @@ LRESULT CALLBACK ButtonsProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
                 FILE *in = fopen(fname, "rb");
                 fread(vram, 1, sizeof(vram), in);
                 fclose(in);
+                redraw_vdp_view();
             }
             return FALSE;
         } break;
         case IDC_VDP_VIEW_VRAM:
         {
             IsVRAM = true;
-            Redraw_VDP_View();
+            redraw_vdp_view();
             return FALSE;
         } break;
         case IDC_VDP_VIEW_RAM:
         {
             IsVRAM = false;
-            Redraw_VDP_View();
+            redraw_vdp_view();
             return FALSE;
         } break;
         }
@@ -1555,7 +1558,7 @@ LRESULT CALLBACK VDPRamProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         } break;
         }
         SetScrollPos(GetDlgItem(hDlg, IDC_VDP_TILES_SCROLLBAR), SB_CTL, CurPos, TRUE);
-        Redraw_VDP_View();
+        redraw_vdp_view();
     } break;
 
     case WM_LBUTTONDOWN:
@@ -1572,7 +1575,7 @@ LRESULT CALLBACK VDPRamProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         if (PtInRect(&r, pt))
         {
             VDPRamPal = (pt.y - r.top) / VDP_BLOCK_H;
-            Redraw_VDP_View();
+            redraw_vdp_view();
         }
         else
         {
@@ -1586,14 +1589,14 @@ LRESULT CALLBACK VDPRamProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 int col = (pt.x - r.left) / VDP_BLOCK_W;
                 VDPRamTile = row * VDP_TILES_IN_ROW + col;
 
-                Redraw_VDP_View();
+                redraw_vdp_view();
             }
         }
     } break;
 
     case UpdateMSG:
     {
-        Redraw_VDP_View();
+        redraw_vdp_view();
     } break;
 
     case WM_CLOSE:
