@@ -304,15 +304,15 @@ static void resize_func()
     SetWindowPos(listHwnd, NULL,
         r.left,
         r.top,
-        (r.right - r.left) / 3,
+        ((r.right - r.left) / 3) + 50,
         r.bottom - r.top - 50,
         SWP_NOZORDER | SWP_NOACTIVATE);
 
     GetWindowRect(listHwnd, &r);
     MapWindowPoints(HWND_DESKTOP, disHwnd, (LPPOINT)&r, 2);
 
-    int left = r.right + 20;
-    int top = r.top + 5;
+    int left = r.right + 10;
+    int top = r.top + 2;
 
     const int widthL = 30; // label
     const int height = 21;
@@ -324,6 +324,8 @@ static void resize_func()
         HWND hDE = GetDlgItem(disHwnd, IDC_REG_D0 + i);
         HWND hAL = GetDlgItem(disHwnd, IDC_REG_A0_L + i);
         HWND hAE = GetDlgItem(disHwnd, IDC_REG_A0 + i);
+        SendMessage(hDE, EM_SETLIMITTEXT, 8, 0);
+        SendMessage(hAE, EM_SETLIMITTEXT, 8, 0);
 
         SetWindowPos(hDL, HWND_TOP,
             left,
@@ -366,6 +368,10 @@ static void resize_func()
     HWND hPPCE = GetDlgItem(disHwnd, IDC_REG_PPC);
     HWND hSRL = GetDlgItem(disHwnd, IDC_REG_SR_L);
     HWND hSRE = GetDlgItem(disHwnd, IDC_REG_SR);
+    SendMessage(hPCE, EM_SETLIMITTEXT, 8, 0);
+    SendMessage(hSPE, EM_SETLIMITTEXT, 8, 0);
+    SendMessage(hPPCE, EM_SETLIMITTEXT, 8, 0);
+    SendMessage(hSRE, EM_SETLIMITTEXT, 4, 0);
 
     SetWindowPos(hPCL, NULL,
         left,
@@ -459,6 +465,8 @@ static void resize_func()
         r2.bottom,
         SWP_NOZORDER | SWP_NOACTIVATE);
     InvalidateRect(F9, NULL, FALSE);
+
+    SendMessage(GetDlgItem(disHwnd, IDC_BPT_ADDR), EM_SETLIMITTEXT, 6, 0);
 }
 
 INT_PTR cpuWM_COMMAND(HWND hwnd, WPARAM wparam, LPARAM lparam)
