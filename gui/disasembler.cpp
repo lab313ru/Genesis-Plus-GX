@@ -25,13 +25,15 @@ namespace cap
 #include "capstone/capstone.h"
 }
 
+#define MAXROMSIZE ((unsigned int)0xA00000)
 #define DBG_EVENTS_TIMER 1
 #define UPDATE_DISASM_TIMER 2
 #define BYTES_BEFORE_PC 0x30
 #define LINES_BEFORE_PC 15
 #define LINES_MAX 25
 #define DISASM_LISTING_BYTES 0x100
-#define ROM_CODE_START_ADDR 0x200
+#define ROM_CODE_START_ADDR ((unsigned int)0x200)
+#define RAM_START_ADDR ((unsigned int)0xFFFF0000)
 #define DISASM_LISTING_BKGN (RGB(0xCC, 0xFF, 0xFF))
 #define CURR_PC_COLOR (RGB(0x60, 0xD0, 0xFF))
 #define BPT_COLOR (RGB(0xFF, 0, 0))
@@ -249,7 +251,7 @@ static void init_highlighter()
     lineAddrFormat.crTextColor = RGB(0, 0, 0); // black
     lineAddrFormat.dwMask = CFM_BOLD | CFM_COLOR;
     lineAddrFormat.dwEffects = CFE_BOLD;
-    rule.pattern = std::regex("^\\b[A-Fa-f0-9]{6}\\b");
+    rule.pattern = std::regex("^\\b[A-Fa-f0-9]{6,8}\\b");
     rule.format = lineAddrFormat;
     highlightingRules.push_back(rule);
 }
@@ -765,7 +767,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
     cap::cs_insn *insn = cap::cs_malloc(cs_handle);
 
     const uint8_t *code_ptr = (const uint8_t *)code;
-    uint64_t start_addr = max((int)pc - BYTES_BEFORE_PC, (pc < 0xA00000) ? ROM_CODE_START_ADDR : 0xFF0000);
+    uint64_t start_addr = max(pc - BYTES_BEFORE_PC, (pc < MAXROMSIZE) ? ROM_CODE_START_ADDR : RAM_START_ADDR);
     uint64_t address = start_addr;
 
     int lines = 0, pc_line = 0;
@@ -779,7 +781,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
             pc_line = lines;
 
             unsigned int pc_data_offset = pc;
-            pc_data_offset = (unsigned int)((pc_data_offset < 0xA00000) ? (pc_data_offset - start_addr) : ((pc_data_offset - start_addr) & 0xFFFF));
+            pc_data_offset = (unsigned int)((pc_data_offset < MAXROMSIZE) ? (pc_data_offset - start_addr) : ((pc_data_offset - start_addr) & 0xFFFF));
 
             code_ptr = (const uint8_t *)(&code[pc_data_offset]);
             address = pc;
@@ -828,17 +830,19 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
 
 static void update_disasm_listing(unsigned int pc)
 {
-    if (pc < 0xA00000)
-    {
-        unsigned int real_pc = pc;
-        pc = max(pc - BYTES_BEFORE_PC, ROM_CODE_START_ADDR);
-        dbg_req->data.mem_data.address = pc;
-        dbg_req->data.mem_data.size = DISASM_LISTING_BYTES;
-        dbg_req->req_type = REQ_READ_68K_ROM;
-        send_dbg_request();
+    unsigned int real_pc = pc;
 
-        get_disasm_listing_pc(real_pc, &dbg_req->data.mem_data.data.m68k_rom[pc], dbg_req->data.mem_data.size, LINES_MAX);
-    }
+    pc = max(pc - BYTES_BEFORE_PC, (pc < MAXROMSIZE) ? ROM_CODE_START_ADDR : RAM_START_ADDR);
+    dbg_req->data.mem_data.address = pc;
+    dbg_req->data.mem_data.size = DISASM_LISTING_BYTES;
+    dbg_req->req_type = (pc < MAXROMSIZE) ? REQ_READ_68K_ROM : REQ_READ_68K_RAM;
+    send_dbg_request();
+
+    get_disasm_listing_pc(
+        real_pc,
+        (pc < MAXROMSIZE) ? &dbg_req->data.mem_data.data.m68k_rom[pc] : &dbg_req->data.mem_data.data.m68k_ram[pc - RAM_START_ADDR],
+        dbg_req->data.mem_data.size,
+        LINES_MAX);
 }
 
 static void update_bpt_list()
@@ -967,7 +971,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             {
             case 0: // Address
             {
-                snprintf(tmp, sizeof(tmp), "%.6X", bpt_data->address);
+                snprintf(tmp, sizeof(tmp), "%.6X", bpt_data->address & 0xFFFFFF);
                 plvdi->item.pszText = tmp;
             } break;
             case 1: // Size
@@ -1043,6 +1047,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         {
             bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
             bpt_data->address = GetDlgItemHex(disHwnd, IDC_BPT_ADDR);
+            bpt_data->address += (bpt_data->address < MAXROMSIZE) ? 0 : 0xFF000000;
             int bpt_type = (int)SendMessage(GetDlgItem(disHwnd, IDC_BPT_SIZE), CB_GETCURSEL, 0, 0);
 
             switch (bpt_type)
