@@ -17,8 +17,10 @@
 #define IDC_STEP_INTO                   1001
 #define IDC_STEP_OVER                   1002
 #define IDC_STEP_OUT                    1003
-#define IDC_RUN                         1004
-#define IDC_RUN_PAUSE                   1004
+#define IDC_SR_T                        1003
+#define IDC_RUN_EMU                     1004
+#define IDC_PAUSE_EMU                   1005
+#define IDC_SR_0E                       1006
 #define IDC_REG_D0                      1007
 #define IDC_REG_D1                      1008
 #define IDC_REG_D2                      1009
@@ -61,18 +63,33 @@
 #define IDC_REG_SR_L                    1046
 #define IDC_REG_SR                      1047
 #define IDC_STEP_INTO_HK                1048
-#define IDC_STEP_OVER_HK                1049
-#define IDC_RUN_PAUSE_HK                1050
-#define IDC_EXEC_BPT                    1051
-#define IDC_MEM_BPT                     1052
-#define IDC_BPT_ADDR                    1053
-#define IDC_BPT_SIZE                    1054
-#define IDC_BPT_IS_READ                 1055
-#define IDC_BPT_IS_WRITE                1056
-#define IDC_ADD_BREAK                   1057
-#define IDC_DEL_BREAK                   1058
-#define IDC_CLEAR_BREAKS                1059
-#define IDC_ADD_BREAK_POS_HK            1060
+#define IDC_SR_S                        1049
+#define IDC_STEP_OVER_HK                1050
+#define IDC_SR_M                        1051
+#define IDC_RUN_EMU_HK                  1052
+#define IDC_SR_0B                       1053
+#define IDC_EXEC_BPT                    1054
+#define IDC_MEM_BPT                     1055
+#define IDC_BPT_ADDR                    1056
+#define IDC_BPT_SIZE                    1057
+#define IDC_BPT_IS_READ                 1058
+#define IDC_BPT_IS_WRITE                1059
+#define IDC_ADD_BREAK                   1060
+#define IDC_DEL_BREAK                   1061
+#define IDC_CLEAR_BREAKS                1062
+#define IDC_ADD_BREAK_POS_HK            1063
+#define IDC_SR_I_SPIN                   1064
+#define IDC_PAUSE_EMU_HK                1065
+#define IDC_SR_I_VAL                    1066
+#define IDC_SR_07                       1067
+#define IDC_SR_06                       1068
+#define IDC_SR_05                       1069
+#define IDC_SR_X                        1070
+#define IDC_SR_N                        1071
+#define IDC_SR_Z                        1072
+#define IDC_SR_V                        1073
+#define IDC_CHECK13                     1074
+#define IDC_SR_C                        1075
 #define IDC_VDP_REGISTERS_VSI           31032
 #define IDC_VDP_REGISTERS_HSI           31033
 #define IDC_VDP_REGISTERS_LCB           31034
@@ -194,7 +211,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        101
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1001
+#define _APS_NEXT_CONTROL_VALUE         1062
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

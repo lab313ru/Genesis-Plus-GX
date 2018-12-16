@@ -40,7 +40,8 @@ std::string make_hex_string(unsigned int width, unsigned int data)
     std::string result;
     std::stringstream text;
     text << std::setw(width) << std::setfill('0') << std::hex << std::uppercase;
-    text << (data & ((1 << (width * 4)) - 1));
+
+    text << (unsigned int)((uint64_t)data & (uint64_t)((uint64_t)(1ULL << (uint64_t)((uint64_t)width * 4ULL)) - 1ULL));
     return text.str();
 }
 

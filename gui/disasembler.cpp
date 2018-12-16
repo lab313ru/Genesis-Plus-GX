@@ -45,7 +45,7 @@ static HWND disHwnd = NULL, listHwnd = NULL;
 static std::string cliptext;
 static cap::csh cs_handle;
 static std::map<unsigned int, int> linesMap;
-static bool pausedResumed = false;
+static bool paused = false;
 static unsigned int last_pc = ROM_CODE_START_ADDR;
 
 static std::string previousText;
@@ -312,11 +312,11 @@ static void resize_func()
     MapWindowPoints(HWND_DESKTOP, disHwnd, (LPPOINT)&r, 2);
 
     int left = r.right + 10;
-    int top = r.top + 2;
+    int top = r.top + 5;
 
     const int widthL = 30; // label
     const int height = 21;
-    const int widthE = 80; // edit
+    const int widthE = 65; // edit
 
     for (int i = 0; i <= (IDC_REG_D7 - IDC_REG_D0); ++i)
     {
@@ -439,123 +439,108 @@ static void resize_func()
 
     HWND F7 = GetDlgItem(disHwnd, IDC_STEP_INTO);
     HWND F8 = GetDlgItem(disHwnd, IDC_STEP_OVER);
-    HWND F9 = GetDlgItem(disHwnd, IDC_RUN_PAUSE);
+    HWND F9 = GetDlgItem(disHwnd, IDC_RUN_EMU);
+    HWND PAUSE = GetDlgItem(disHwnd, IDC_PAUSE_EMU);
     GetClientRect(F7, &r2);
 
+    top += 5;
+
     SetWindowPos(F7, NULL,
-        left,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + height + 10 + (height + 5) * 2,
+        left + 10,
+        top + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + height + (height + 5) * 2,
         r2.right,
         r2.bottom,
         SWP_NOZORDER | SWP_NOACTIVATE);
     InvalidateRect(F7, NULL, FALSE);
 
     SetWindowPos(F8, NULL,
-        left + (r2.right + 2) * 1,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + height + 10 + (height + 5) * 2,
+        left + 10 + (r2.right + 2) * 1 + 10,
+        top + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + height + (height + 5) * 2,
         r2.right,
         r2.bottom,
         SWP_NOZORDER | SWP_NOACTIVATE);
     InvalidateRect(F8, NULL, FALSE);
 
     SetWindowPos(F9, NULL,
-        left + (r2.right + 2) * 2,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + height + 10 + (height + 5) * 2,
+        left + 10,
+        top + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + height + (height + 5) * 2 + r2.bottom + 2,
         r2.right,
         r2.bottom,
         SWP_NOZORDER | SWP_NOACTIVATE);
     InvalidateRect(F9, NULL, FALSE);
 
+    SetWindowPos(PAUSE, NULL,
+        left + 10 + (r2.right + 2) * 1 + 10,
+        top + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + height + (height + 5) * 2 + r2.bottom + 2,
+        r2.right,
+        r2.bottom,
+        SWP_NOZORDER | SWP_NOACTIVATE);
+    InvalidateRect(PAUSE, NULL, FALSE);
+
     SendMessage(GetDlgItem(disHwnd, IDC_BPT_ADDR), EM_SETLIMITTEXT, 6, 0);
 }
 
-INT_PTR cpuWM_COMMAND(HWND hwnd, WPARAM wparam, LPARAM lparam)
+static void update_sr_view(unsigned short sr)
 {
-    if ((HIWORD(wparam) == EN_CHANGE))
-    {
-        return FALSE;
-    }
-    else if ((HIWORD(wparam) == EN_SETFOCUS))
-    {
-        previousText = GetDlgItemString(hwnd, LOWORD(wparam));
-        currentControlFocus = LOWORD(wparam);
-    }
-    else if ((HIWORD(wparam) == EN_KILLFOCUS))
-    {
-        std::string newText = GetDlgItemString(hwnd, LOWORD(wparam));
-        if (newText != previousText)
-        {
-            dbg_req->data.regs_data.type = REG_TYPE_M68K;
-            switch (LOWORD(wparam))
-            {
-            case IDC_REG_D0:
-                dbg_req->data.regs_data.data.regs_68k.values.d0 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_D1:
-                dbg_req->data.regs_data.data.regs_68k.values.d1 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_D2:
-                dbg_req->data.regs_data.data.regs_68k.values.d2 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_D3:
-                dbg_req->data.regs_data.data.regs_68k.values.d3 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_D4:
-                dbg_req->data.regs_data.data.regs_68k.values.d4 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_D5:
-                dbg_req->data.regs_data.data.regs_68k.values.d5 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_D6:
-                dbg_req->data.regs_data.data.regs_68k.values.d6 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_D7:
-                dbg_req->data.regs_data.data.regs_68k.values.d7 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_A0:
-                dbg_req->data.regs_data.data.regs_68k.values.a0 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_A1:
-                dbg_req->data.regs_data.data.regs_68k.values.a1 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_A2:
-                dbg_req->data.regs_data.data.regs_68k.values.a2 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_A3:
-                dbg_req->data.regs_data.data.regs_68k.values.a3 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_A4:
-                dbg_req->data.regs_data.data.regs_68k.values.a4 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_A5:
-                dbg_req->data.regs_data.data.regs_68k.values.a5 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_A6:
-                dbg_req->data.regs_data.data.regs_68k.values.a6 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_A7:
-                dbg_req->data.regs_data.data.regs_68k.values.a7 = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_PC:
-                dbg_req->data.regs_data.data.regs_68k.values.pc = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_SP:
-                dbg_req->data.regs_data.data.regs_68k.values.sp = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_PPC:
-                dbg_req->data.regs_data.data.regs_68k.values.ppc = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            case IDC_REG_SR:
-                dbg_req->data.regs_data.data.regs_68k.values.sr = GetDlgItemHex(hwnd, LOWORD(wparam));
-                break;
-            }
+    char tmp[4] = "000";
 
-            dbg_req->req_type = REQ_SET_REGS;
-            send_dbg_request();
-        }
-    }
+    CheckDlgButton(disHwnd, IDC_SR_T, (sr  & (1 << 0x0F)) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(disHwnd, IDC_SR_0E, (sr  & (1 << 0x0E)) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(disHwnd, IDC_SR_S, (sr  & (1 << 0x0D)) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(disHwnd, IDC_SR_M, (sr  & (1 << 0x0C)) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(disHwnd, IDC_SR_0B, (sr  & (1 << 0x0B)) ? BST_CHECKED : BST_UNCHECKED);
 
-    return TRUE;
+    int bin = (sr  & (7 << 0x08)) >> 0x08;
+    for (int i = 0; i < 3; ++i)
+    {
+        tmp[2 - i] = '0' + (bin & 1);
+        bin >>= 1;
+    }
+    SetDlgItemText(disHwnd, IDC_SR_I_VAL, tmp);
+
+    CheckDlgButton(disHwnd, IDC_SR_07, (sr  & (1 << 0x07)) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(disHwnd, IDC_SR_06, (sr  & (1 << 0x06)) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(disHwnd, IDC_SR_05, (sr  & (1 << 0x05)) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(disHwnd, IDC_SR_X, (sr  & (1 << 0x04)) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(disHwnd, IDC_SR_N, (sr  & (1 << 0x03)) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(disHwnd, IDC_SR_Z, (sr  & (1 << 0x02)) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(disHwnd, IDC_SR_V, (sr  & (1 << 0x01)) ? BST_CHECKED : BST_UNCHECKED);
+    CheckDlgButton(disHwnd, IDC_SR_C, (sr  & (1 << 0x00)) ? BST_CHECKED : BST_UNCHECKED);
+}
+
+static unsigned short update_sr_reg()
+{
+    unsigned short sr = 0;
+
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_T) ? 1 : 0) << 0x0F;
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_0E) ? 1 : 0) << 0x0E;
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_S) ? 1 : 0) << 0x0D;
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_M) ? 1 : 0) << 0x0C;
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_0B) ? 1 : 0) << 0x0B;
+
+    std::string val = GetDlgItemString(disHwnd, IDC_SR_I_VAL);
+    int bin = strtol(val.c_str(), NULL, 2);
+    sr |= (bin & 7) << 0x08;
+
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_07) ? 1 : 0) << 0x07;
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_06) ? 1 : 0) << 0x06;
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_05) ? 1 : 0) << 0x05;
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_X) ? 1 : 0) << 0x04;
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_N) ? 1 : 0) << 0x03;
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_Z) ? 1 : 0) << 0x02;
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_V) ? 1 : 0) << 0x01;
+    sr |= (IsDlgButtonChecked(disHwnd, IDC_SR_C) ? 1 : 0) << 0x00;
+
+    return sr;
+}
+
+static void set_m68k_reg(int reg_index, unsigned int value)
+{
+    dbg_req->data.regs_data.type = REG_TYPE_M68K;
+    dbg_req->data.regs_data.data.any_reg.index = reg_index;
+    dbg_req->data.regs_data.data.any_reg.val = value;
+    dbg_req->req_type = REQ_SET_REG;
+    send_dbg_request();
 }
 
 static void update_regs()
@@ -609,7 +594,10 @@ static void update_regs()
     if (currentControlFocus != IDC_REG_PPC)
         UpdateDlgItemHex(disHwnd, IDC_REG_PPC, 8, reg_vals->ppc);
     if (currentControlFocus != IDC_REG_SR)
+    {
         UpdateDlgItemHex(disHwnd, IDC_REG_SR, 4, reg_vals->sr);
+        update_sr_view(reg_vals->sr);
+    }
 }
 
 static void set_listing_text()
@@ -798,7 +786,7 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
             continue;
         }
 
-        linesMap.insert(std::make_pair(insn->address, lines));
+        linesMap.insert(std::make_pair((unsigned int)insn->address, lines));
 
         std::string line;
 
@@ -863,9 +851,11 @@ static void update_bpt_list()
 
 static void update_dbg_window_info()
 {
+    LockWindowUpdate(disHwnd);
     update_regs();
     update_bpt_list();
     update_disasm_listing(last_pc);
+    LockWindowUpdate(NULL);
 }
 
 static void do_game_started(unsigned int pc)
@@ -874,7 +864,7 @@ static void do_game_started(unsigned int pc)
 
 static void do_game_paused(unsigned int pc)
 {
-    pausedResumed = true;
+    paused = true;
     update_dbg_window_info();
 
     SetForegroundWindow(disHwnd);
@@ -914,7 +904,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     {
         listHwnd = GetDlgItem(hWnd, IDC_DISASM_LIST);
         SetFocus(listHwnd);
-        set_listing_font("Liberation Mono", 8);
+        set_listing_font("Liberation Mono", 9);
 
         CheckDlgButton(hWnd, IDC_EXEC_BPT, BST_CHECKED);
         CheckDlgButton(hWnd, IDC_BPT_IS_READ, BST_CHECKED);
@@ -936,12 +926,14 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         column.pszText = (LPSTR)"Address";
         column.cx = 0x42;
         SendMessage(bpt_list, LVM_INSERTCOLUMN, 0, (LPARAM)&column);
-        column.cx = 0x20;
+        column.cx = 0x30;
         column.pszText = (LPSTR)"Size";
         SendMessage(bpt_list, LVM_INSERTCOLUMN, 1, (LPARAM)&column);
         column.cx = 0x52;
         column.pszText = (LPSTR)"Type";
         SendMessage(bpt_list, LVM_INSERTCOLUMN, 2, (LPARAM)&column);
+
+        SendMessage(GetDlgItem(hWnd, IDC_SR_I_SPIN), UDM_SETRANGE, 0, MAKELPARAM(100,0));
 
         SetTimer(hWnd, DBG_EVENTS_TIMER, 10, NULL);
         SetTimer(hWnd, UPDATE_DISASM_TIMER, 2000, NULL);
@@ -953,7 +945,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         case DBG_EVENTS_TIMER: check_debugger_events(); break;
         case UPDATE_DISASM_TIMER:
         {
-            if (!pausedResumed)
+            if (!paused)
                 update_dbg_window_info();
         } break;
         }
@@ -997,102 +989,244 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             }
             return TRUE;
         } break;
+        case UDN_DELTAPOS:
+        {
+            char tmp[4];
+            LPNMUPDOWN lpnmud = (LPNMUPDOWN)lParam;
+
+            std::string val = GetDlgItemString(disHwnd, IDC_SR_I_VAL);
+            int bin = strtol(val.c_str(), NULL, 2);
+
+            bin = (bin + lpnmud->iDelta) & 7;
+
+            for (int i = 0; i < 3; ++i)
+            {
+                tmp[2 - i] = '0' + (bin & 1);
+                bin >>= 1;
+            }
+            tmp[3] = '\0';
+
+            SetDlgItemText(disHwnd, IDC_SR_I_VAL, tmp);
+
+            unsigned short sr = update_sr_reg();
+            UpdateDlgItemHex(disHwnd, IDC_REG_SR, 4, sr);
+
+            set_m68k_reg(17, sr); // m68k.h -> M68K_REG_SR = 17
+        } break;
         }
     } break;
     case WM_COMMAND:
     {
-        switch (LOWORD(wParam))
+        if (HIWORD(wParam) == BN_CLICKED)
         {
-        case IDC_STEP_INTO:
-        case IDC_STEP_INTO_HK:
-            dbg_req->req_type = REQ_STEP_INTO;
-            send_dbg_request();
-            break;
-        case IDC_STEP_OVER:
-        case IDC_STEP_OVER_HK:
-            dbg_req->req_type = REQ_STEP_OVER;
-            send_dbg_request();
-            break;
-        case IDC_RUN_PAUSE:
-        case IDC_RUN_PAUSE_HK:
-            dbg_req->req_type = pausedResumed ? REQ_RESUME : REQ_PAUSE;
-            send_dbg_request();
-            pausedResumed = !pausedResumed;
-            break;
-        case IDC_ADD_BREAK_POS_HK:
-        {
-            int lineIndex = (int)SendMessage(listHwnd, EM_LINEFROMCHAR, -1, 0);
-            unsigned int address = lineIndexToPc(lineIndex);
-
-            bool was_deleted = false;
-            for (int i = 0; i < dbg_req->bpt_list.count; ++i)
+            switch (LOWORD(wParam))
             {
-                if (address == dbg_req->bpt_list.breaks[i].address)
+            case IDC_SR_T:
+            case IDC_SR_0E:
+            case IDC_SR_S:
+            case IDC_SR_M:
+            case IDC_SR_0B:
+            case IDC_SR_07:
+            case IDC_SR_06:
+            case IDC_SR_05:
+            case IDC_SR_X:
+            case IDC_SR_N:
+            case IDC_SR_Z:
+            case IDC_SR_V:
+            case IDC_SR_C:
+            {
+                unsigned short sr = update_sr_reg();
+                UpdateDlgItemHex(disHwnd, IDC_REG_SR, 4, sr);
+
+                dbg_req->data.regs_data.type = REG_TYPE_M68K;
+                dbg_req->data.regs_data.data.any_reg.index = 17; // m68k.h -> M68K_REG_SR
+                dbg_req->data.regs_data.data.any_reg.val = sr;
+                dbg_req->req_type = REQ_SET_REG;
+                send_dbg_request();
+            } break;
+            case IDC_STEP_INTO:
+            case IDC_STEP_INTO_HK:
+                dbg_req->req_type = REQ_STEP_INTO;
+                send_dbg_request();
+                break;
+            case IDC_STEP_OVER:
+            case IDC_STEP_OVER_HK:
+                dbg_req->req_type = REQ_STEP_OVER;
+                send_dbg_request();
+                break;
+            case IDC_RUN_EMU:
+            case IDC_RUN_EMU_HK:
+                if (!paused)
+                    break;
+                dbg_req->req_type = REQ_RESUME;
+                send_dbg_request();
+                paused = true;
+                break;
+            case IDC_PAUSE_EMU:
+            case IDC_PAUSE_EMU_HK:
+                if (paused)
+                    break;
+
+                dbg_req->req_type = REQ_PAUSE;
+                send_dbg_request();
+                paused = false;
+                break;
+            case IDC_ADD_BREAK_POS_HK:
+            {
+                int lineIndex = (int)SendMessage(listHwnd, EM_LINEFROMCHAR, -1, 0);
+                unsigned int address = lineIndexToPc(lineIndex);
+
+                bool was_deleted = false;
+                for (int i = 0; i < dbg_req->bpt_list.count; ++i)
+                {
+                    if (address == dbg_req->bpt_list.breaks[i].address)
+                    {
+                        bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+                        bpt_data->address = address;
+                        bpt_data->type = BPT_M68K_E;
+                        bpt_data->width = 1;
+                        dbg_req->req_type = REQ_DEL_BREAK;
+                        was_deleted = true;
+                        break;
+                    }
+                }
+
+                if (!was_deleted)
                 {
                     bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
                     bpt_data->address = address;
                     bpt_data->type = BPT_M68K_E;
                     bpt_data->width = 1;
-                    dbg_req->req_type = REQ_DEL_BREAK;
-                    was_deleted = true;
-                    break;
+                    dbg_req->req_type = REQ_ADD_BREAK;
                 }
-            }
 
-            if (!was_deleted)
+                send_dbg_request();
+                update_dbg_window_info();
+            } break;
+            case IDC_ADD_BREAK:
             {
                 bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
-                bpt_data->address = address;
-                bpt_data->type = BPT_M68K_E;
-                bpt_data->width = 1;
+                bpt_data->address = GetDlgItemHex(disHwnd, IDC_BPT_ADDR);
+                bpt_data->address += (bpt_data->address < MAXROMSIZE) ? 0 : 0xFF000000;
+                int bpt_type = (int)SendMessage(GetDlgItem(disHwnd, IDC_BPT_SIZE), CB_GETCURSEL, 0, 0);
+
+                switch (bpt_type)
+                {
+                case 1: bpt_data->width = 2; break;
+                case 2: bpt_data->width = 4; break;
+                default: bpt_data->width = 1; break;
+                }
+
+                bpt_data->type = (bpt_type_t)(IsDlgButtonChecked(disHwnd, IDC_EXEC_BPT) ? BPT_M68K_E :
+                    ((IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ) ? BPT_M68K_R : 0) | (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE) ? BPT_M68K_W : 0)));
                 dbg_req->req_type = REQ_ADD_BREAK;
-            }
-
-            send_dbg_request();
-            update_dbg_window_info();
-        } break;
-        case IDC_ADD_BREAK:
-        {
-            bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
-            bpt_data->address = GetDlgItemHex(disHwnd, IDC_BPT_ADDR);
-            bpt_data->address += (bpt_data->address < MAXROMSIZE) ? 0 : 0xFF000000;
-            int bpt_type = (int)SendMessage(GetDlgItem(disHwnd, IDC_BPT_SIZE), CB_GETCURSEL, 0, 0);
-
-            switch (bpt_type)
+                send_dbg_request();
+                update_dbg_window_info();
+            } break;
+            case IDC_DEL_BREAK:
             {
-            case 1: bpt_data->width = 2; break;
-            case 2: bpt_data->width = 4; break;
-            default: bpt_data->width = 1; break;
-            }
+                bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+                int index = ListView_GetNextItem(GetDlgItem(disHwnd, IDC_BPT_LIST), -1, LVNI_SELECTED);
 
-            bpt_data->type = (bpt_type_t)(IsDlgButtonChecked(disHwnd, IDC_EXEC_BPT) ? BPT_M68K_E :
-                ((IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ) ? BPT_M68K_R : 0) | (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE) ? BPT_M68K_W : 0)));
-            dbg_req->req_type = REQ_ADD_BREAK;
-            send_dbg_request();
-            update_dbg_window_info();
-        } break;
-        case IDC_DEL_BREAK:
-        {
-            bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
-            int index = ListView_GetNextItem(GetDlgItem(disHwnd, IDC_BPT_LIST), -1, LVNI_SELECTED);
+                if (index != -1)
+                {
+                    bpt_data_t *bpt_item = &dbg_req->bpt_list.breaks[index];
 
-            if (index != -1)
-            {
-                bpt_data_t *bpt_item = &dbg_req->bpt_list.breaks[index];
-
-                bpt_data->address = bpt_item->address;
-                bpt_data->type = bpt_item->type;
-                dbg_req->req_type = REQ_DEL_BREAK;
+                    bpt_data->address = bpt_item->address;
+                    bpt_data->type = bpt_item->type;
+                    dbg_req->req_type = REQ_DEL_BREAK;
+                    send_dbg_request();
+                    update_dbg_window_info();
+                }
+            } break;
+            case IDC_CLEAR_BREAKS:
+                dbg_req->req_type = REQ_CLEAR_BREAKS;
                 send_dbg_request();
                 update_dbg_window_info();
             }
-        } break;
-        case IDC_CLEAR_BREAKS:
-            dbg_req->req_type = REQ_CLEAR_BREAKS;
-            send_dbg_request();
-            update_dbg_window_info();
-        }
 
+            return TRUE;
+        }
+        else if ((HIWORD(wParam) == EN_CHANGE))
+        {
+            return FALSE;
+        }
+        else if ((HIWORD(wParam) == EN_SETFOCUS))
+        {
+            previousText = GetDlgItemString(hWnd, LOWORD(wParam));
+            currentControlFocus = LOWORD(wParam);
+        }
+        else if ((HIWORD(wParam) == EN_KILLFOCUS))
+        {
+            std::string newText = GetDlgItemString(hWnd, LOWORD(wParam));
+            if (newText != previousText)
+            {
+                int value = GetDlgItemHex(hWnd, LOWORD(wParam));
+                switch (LOWORD(wParam))
+                {
+                case IDC_REG_D0:
+                    set_m68k_reg(0, value);
+                    break;
+                case IDC_REG_D1:
+                    set_m68k_reg(1, value);
+                    break;
+                case IDC_REG_D2:
+                    set_m68k_reg(2, value);
+                    break;
+                case IDC_REG_D3:
+                    set_m68k_reg(3, value);
+                    break;
+                case IDC_REG_D4:
+                    set_m68k_reg(4, value);
+                    break;
+                case IDC_REG_D5:
+                    set_m68k_reg(5, value);
+                    break;
+                case IDC_REG_D6:
+                    set_m68k_reg(6, value);
+                    break;
+                case IDC_REG_D7:
+                    set_m68k_reg(7, value);
+                    break;
+                case IDC_REG_A0:
+                    set_m68k_reg(8, value);
+                    break;
+                case IDC_REG_A1:
+                    set_m68k_reg(9, value);
+                    break;
+                case IDC_REG_A2:
+                    set_m68k_reg(10, value);
+                    break;
+                case IDC_REG_A3:
+                    set_m68k_reg(11, value);
+                    break;
+                case IDC_REG_A4:
+                    set_m68k_reg(12, value);
+                    break;
+                case IDC_REG_A5:
+                    set_m68k_reg(13, value);
+                    break;
+                case IDC_REG_A6:
+                    set_m68k_reg(14, value);
+                    break;
+                case IDC_REG_A7:
+                    set_m68k_reg(15, value);
+                    break;
+                case IDC_REG_PC:
+                    set_m68k_reg(16, value);
+                    break;
+                case IDC_REG_SP:
+                    set_m68k_reg(18, value);
+                    break;
+                case IDC_REG_PPC:
+                    set_m68k_reg(21, value);
+                    break;
+                case IDC_REG_SR:
+                    set_m68k_reg(17, value);
+                    break;
+                }
+            }
+        }
         return TRUE;
     } break;
     case WM_DESTROY:
