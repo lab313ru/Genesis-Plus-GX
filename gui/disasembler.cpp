@@ -25,7 +25,8 @@ namespace cap
 #include "capstone/capstone.h"
 }
 
-#define UPDATE_DISASM_TIMER 1
+#define DBG_EVENTS_TIMER 1
+#define UPDATE_DISASM_TIMER 2
 #define BYTES_BEFORE_PC 0x30
 #define LINES_BEFORE_PC 15
 #define LINES_MAX 25
@@ -40,6 +41,7 @@ static std::string cliptext;
 static cap::csh cs_handle;
 static std::map<unsigned int, int> linesMap;
 static bool pausedResumed = false;
+static unsigned int last_pc = ROM_CODE_START_ADDR;
 
 static std::string previousText;
 static unsigned int currentControlFocus;
@@ -551,6 +553,8 @@ static void update_regs()
 
     regs_68k_data_t *reg_vals = &dbg_req->data.regs_data.data.regs_68k.values;
 
+    last_pc = reg_vals->pc;
+
     if (currentControlFocus != IDC_REG_D0)
         UpdateDlgItemHex(disHwnd, IDC_REG_D0, 8, reg_vals->d0);
     if (currentControlFocus != IDC_REG_D1)
@@ -777,6 +781,12 @@ static void update_disasm_listing(unsigned int pc)
     }
 }
 
+static void update_dbg_window_info()
+{
+    update_regs();
+    update_disasm_listing(last_pc);
+}
+
 static void do_game_started(unsigned int pc)
 {
 }
@@ -784,8 +794,7 @@ static void do_game_started(unsigned int pc)
 static void do_game_paused(unsigned int pc)
 {
     pausedResumed = true;
-    update_regs();
-    update_disasm_listing(pc);
+    update_dbg_window_info();
 
     SetForegroundWindow(disHwnd);
 }
@@ -822,11 +831,21 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     {
     case WM_INITDIALOG:
     {
-        SetTimer(hWnd, UPDATE_DISASM_TIMER, 10, NULL);
+        SetTimer(hWnd, DBG_EVENTS_TIMER, 10, NULL);
+        SetTimer(hWnd, UPDATE_DISASM_TIMER, 2000, NULL);
     } break;
     case WM_TIMER:
     {
-        check_debugger_events();
+        switch (LOWORD(wParam))
+        {
+        case DBG_EVENTS_TIMER: check_debugger_events(); break;
+        case UPDATE_DISASM_TIMER:
+        {
+            if (!pausedResumed)
+                update_dbg_window_info();
+        } break;
+        }
+        return FALSE;
     } break;
     case WM_SIZE:
     {
@@ -860,6 +879,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     case WM_DESTROY:
     {
         KillTimer(hWnd, UPDATE_DISASM_TIMER);
+        KillTimer(hWnd, DBG_EVENTS_TIMER);
         PostQuitMessage(0);
     } break;
     }
@@ -932,10 +952,10 @@ void create_disassembler()
 
 void destroy_disassembler()
 {
+    stop_debugging();
     DestroyWindow(disHwnd);
     TerminateThread(hThread, 0);
     CloseHandle(hThread);
-    stop_debugging();
 }
 
 void update_disassembler()
