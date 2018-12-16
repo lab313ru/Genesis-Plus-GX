@@ -1017,137 +1017,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     } break;
     case WM_COMMAND:
     {
-        if (HIWORD(wParam) == BN_CLICKED)
-        {
-            switch (LOWORD(wParam))
-            {
-            case IDC_SR_T:
-            case IDC_SR_0E:
-            case IDC_SR_S:
-            case IDC_SR_M:
-            case IDC_SR_0B:
-            case IDC_SR_07:
-            case IDC_SR_06:
-            case IDC_SR_05:
-            case IDC_SR_X:
-            case IDC_SR_N:
-            case IDC_SR_Z:
-            case IDC_SR_V:
-            case IDC_SR_C:
-            {
-                unsigned short sr = update_sr_reg();
-                UpdateDlgItemHex(disHwnd, IDC_REG_SR, 4, sr);
-
-                dbg_req->data.regs_data.type = REG_TYPE_M68K;
-                dbg_req->data.regs_data.data.any_reg.index = 17; // m68k.h -> M68K_REG_SR
-                dbg_req->data.regs_data.data.any_reg.val = sr;
-                dbg_req->req_type = REQ_SET_REG;
-                send_dbg_request();
-            } break;
-            case IDC_STEP_INTO:
-            case IDC_STEP_INTO_HK:
-                dbg_req->req_type = REQ_STEP_INTO;
-                send_dbg_request();
-                break;
-            case IDC_STEP_OVER:
-            case IDC_STEP_OVER_HK:
-                dbg_req->req_type = REQ_STEP_OVER;
-                send_dbg_request();
-                break;
-            case IDC_RUN_EMU:
-            case IDC_RUN_EMU_HK:
-                if (!paused)
-                    break;
-                dbg_req->req_type = REQ_RESUME;
-                send_dbg_request();
-                paused = true;
-                break;
-            case IDC_PAUSE_EMU:
-            case IDC_PAUSE_EMU_HK:
-                if (paused)
-                    break;
-
-                dbg_req->req_type = REQ_PAUSE;
-                send_dbg_request();
-                paused = false;
-                break;
-            case IDC_ADD_BREAK_POS_HK:
-            {
-                int lineIndex = (int)SendMessage(listHwnd, EM_LINEFROMCHAR, -1, 0);
-                unsigned int address = lineIndexToPc(lineIndex);
-
-                bool was_deleted = false;
-                for (int i = 0; i < dbg_req->bpt_list.count; ++i)
-                {
-                    if (address == dbg_req->bpt_list.breaks[i].address)
-                    {
-                        bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
-                        bpt_data->address = address;
-                        bpt_data->type = BPT_M68K_E;
-                        bpt_data->width = 1;
-                        dbg_req->req_type = REQ_DEL_BREAK;
-                        was_deleted = true;
-                        break;
-                    }
-                }
-
-                if (!was_deleted)
-                {
-                    bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
-                    bpt_data->address = address;
-                    bpt_data->type = BPT_M68K_E;
-                    bpt_data->width = 1;
-                    dbg_req->req_type = REQ_ADD_BREAK;
-                }
-
-                send_dbg_request();
-                update_dbg_window_info();
-            } break;
-            case IDC_ADD_BREAK:
-            {
-                bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
-                bpt_data->address = GetDlgItemHex(disHwnd, IDC_BPT_ADDR);
-                bpt_data->address += (bpt_data->address < MAXROMSIZE) ? 0 : 0xFF000000;
-                int bpt_type = (int)SendMessage(GetDlgItem(disHwnd, IDC_BPT_SIZE), CB_GETCURSEL, 0, 0);
-
-                switch (bpt_type)
-                {
-                case 1: bpt_data->width = 2; break;
-                case 2: bpt_data->width = 4; break;
-                default: bpt_data->width = 1; break;
-                }
-
-                bpt_data->type = (bpt_type_t)(IsDlgButtonChecked(disHwnd, IDC_EXEC_BPT) ? BPT_M68K_E :
-                    ((IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ) ? BPT_M68K_R : 0) | (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE) ? BPT_M68K_W : 0)));
-                dbg_req->req_type = REQ_ADD_BREAK;
-                send_dbg_request();
-                update_dbg_window_info();
-            } break;
-            case IDC_DEL_BREAK:
-            {
-                bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
-                int index = ListView_GetNextItem(GetDlgItem(disHwnd, IDC_BPT_LIST), -1, LVNI_SELECTED);
-
-                if (index != -1)
-                {
-                    bpt_data_t *bpt_item = &dbg_req->bpt_list.breaks[index];
-
-                    bpt_data->address = bpt_item->address;
-                    bpt_data->type = bpt_item->type;
-                    dbg_req->req_type = REQ_DEL_BREAK;
-                    send_dbg_request();
-                    update_dbg_window_info();
-                }
-            } break;
-            case IDC_CLEAR_BREAKS:
-                dbg_req->req_type = REQ_CLEAR_BREAKS;
-                send_dbg_request();
-                update_dbg_window_info();
-            }
-
-            return TRUE;
-        }
-        else if ((HIWORD(wParam) == EN_CHANGE))
+        if ((HIWORD(wParam) == EN_CHANGE))
         {
             return FALSE;
         }
@@ -1161,6 +1031,9 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             std::string newText = GetDlgItemString(hWnd, LOWORD(wParam));
             if (newText != previousText)
             {
+                if (!paused)
+                    break;
+
                 int value = GetDlgItemHex(hWnd, LOWORD(wParam));
                 switch (LOWORD(wParam))
                 {
@@ -1226,7 +1099,139 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                     break;
                 }
             }
+            return TRUE;
         }
+        switch (LOWORD(wParam))
+        {
+        case IDC_SR_T:
+        case IDC_SR_0E:
+        case IDC_SR_S:
+        case IDC_SR_M:
+        case IDC_SR_0B:
+        case IDC_SR_07:
+        case IDC_SR_06:
+        case IDC_SR_05:
+        case IDC_SR_X:
+        case IDC_SR_N:
+        case IDC_SR_Z:
+        case IDC_SR_V:
+        case IDC_SR_C:
+        {
+            if (!paused)
+                break;
+
+            unsigned short sr = update_sr_reg();
+            UpdateDlgItemHex(disHwnd, IDC_REG_SR, 4, sr);
+
+            set_m68k_reg(17, sr);
+        } break;
+        case IDC_STEP_INTO:
+        case IDC_STEP_INTO_HK:
+            if (!paused)
+                break;
+
+            dbg_req->req_type = REQ_STEP_INTO;
+            send_dbg_request();
+            break;
+        case IDC_STEP_OVER:
+        case IDC_STEP_OVER_HK:
+            if (!paused)
+                break;
+
+            dbg_req->req_type = REQ_STEP_OVER;
+            send_dbg_request();
+            break;
+        case IDC_RUN_EMU:
+        case IDC_RUN_EMU_HK:
+            if (!paused)
+                break;
+            dbg_req->req_type = REQ_RESUME;
+            send_dbg_request();
+            paused = false;
+            break;
+        case IDC_PAUSE_EMU:
+        case IDC_PAUSE_EMU_HK:
+            if (paused)
+                break;
+
+            dbg_req->req_type = REQ_PAUSE;
+            send_dbg_request();
+            paused = true;
+            break;
+        case IDC_ADD_BREAK_POS_HK:
+        {
+            int lineIndex = (int)SendMessage(listHwnd, EM_LINEFROMCHAR, -1, 0);
+            unsigned int address = lineIndexToPc(lineIndex);
+
+            bool was_deleted = false;
+            for (int i = 0; i < dbg_req->bpt_list.count; ++i)
+            {
+                if (address == dbg_req->bpt_list.breaks[i].address)
+                {
+                    bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+                    bpt_data->address = address;
+                    bpt_data->type = BPT_M68K_E;
+                    bpt_data->width = 1;
+                    dbg_req->req_type = REQ_DEL_BREAK;
+                    was_deleted = true;
+                    break;
+                }
+            }
+
+            if (!was_deleted)
+            {
+                bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+                bpt_data->address = address;
+                bpt_data->type = BPT_M68K_E;
+                bpt_data->width = 1;
+                dbg_req->req_type = REQ_ADD_BREAK;
+            }
+
+            send_dbg_request();
+            update_dbg_window_info();
+        } break;
+        case IDC_ADD_BREAK:
+        {
+            bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+            bpt_data->address = GetDlgItemHex(disHwnd, IDC_BPT_ADDR);
+            bpt_data->address += (bpt_data->address < MAXROMSIZE) ? 0 : 0xFF000000;
+            int bpt_type = (int)SendMessage(GetDlgItem(disHwnd, IDC_BPT_SIZE), CB_GETCURSEL, 0, 0);
+
+            switch (bpt_type)
+            {
+            case 1: bpt_data->width = 2; break;
+            case 2: bpt_data->width = 4; break;
+            default: bpt_data->width = 1; break;
+            }
+
+            bpt_data->type = (bpt_type_t)(IsDlgButtonChecked(disHwnd, IDC_EXEC_BPT) ? BPT_M68K_E :
+                ((IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ) ? BPT_M68K_R : 0) | (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE) ? BPT_M68K_W : 0)));
+            dbg_req->req_type = REQ_ADD_BREAK;
+            send_dbg_request();
+            update_dbg_window_info();
+        } break;
+        case IDC_DEL_BREAK:
+        {
+            bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+            int index = ListView_GetNextItem(GetDlgItem(disHwnd, IDC_BPT_LIST), -1, LVNI_SELECTED);
+
+            if (index != -1)
+            {
+                bpt_data_t *bpt_item = &dbg_req->bpt_list.breaks[index];
+
+                bpt_data->address = bpt_item->address;
+                bpt_data->type = bpt_item->type;
+                dbg_req->req_type = REQ_DEL_BREAK;
+                send_dbg_request();
+                update_dbg_window_info();
+            }
+        } break;
+        case IDC_CLEAR_BREAKS:
+            dbg_req->req_type = REQ_CLEAR_BREAKS;
+            send_dbg_request();
+            update_dbg_window_info();
+        }
+
         return TRUE;
     } break;
     case WM_DESTROY:
