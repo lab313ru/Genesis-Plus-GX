@@ -18,44 +18,31 @@ typedef enum {
     BPT_M68K_E = (1 << 0),
     BPT_M68K_R = (1 << 1),
     BPT_M68K_W = (1 << 2),
+    BPT_M68K_RW = BPT_M68K_R | BPT_M68K_W,
 
     // VDP
     BPT_VRAM_R = (1 << 3),
     BPT_VRAM_W = (1 << 4),
+    BPT_VRAM_RW = BPT_VRAM_R | BPT_VRAM_W,
 
     BPT_CRAM_R = (1 << 5),
     BPT_CRAM_W = (1 << 6),
+    BPT_CRAM_RW = BPT_CRAM_R | BPT_CRAM_W,
 
     BPT_VSRAM_R = (1 << 7),
     BPT_VSRAM_W = (1 << 8),
-
-    // REGS
-    BPT_VDP_REG = (1 << 9),
-    BPT_M68K_REG = (1 << 10),
+    BPT_VSRAM_RW = BPT_VSRAM_R | BPT_VSRAM_W,
 
     // Z80
     BPT_Z80_E = (1 << 11),
     BPT_Z80_R = (1 << 12),
     BPT_Z80_W = (1 << 13),
-} bpt_type_t;
+    BPT_Z80_RW = BPT_Z80_R | BPT_Z80_W,
 
-static const char *bpt_type_string[] = {
-    "M68K_NO",
-    "M68K_E",
-    "M68K_R",
-    "M68K_W",
-    "VRAM_R",
-    "VRAM_W",
-    "CRAM_R",
-    "CRAM_W",
-    "VSRAM_R",
-    "VSRAM_W",
-    "VDP_REG",
-    "M68K_REG",
-    "Z80_E",
-    "Z80_R",
-    "Z80_W"
-};
+    // REGS
+    BPT_VDP_REG = (1 << 9),
+    BPT_M68K_REG = (1 << 10),
+} bpt_type_t;
 
 typedef enum {
     REQ_NO_REQUEST,
@@ -190,7 +177,7 @@ int activate_shared_mem();
 void deactivate_shared_mem();
 void unwrap_debugger();
 int recv_dbg_event(int wait);
-void send_dbg_request();
+void send_dbg_request(request_type_t type);
 
 #ifdef __cplusplus
 }

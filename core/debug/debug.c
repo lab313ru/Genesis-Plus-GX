@@ -139,7 +139,6 @@ void check_breakpoint(bpt_type_t type, int width, unsigned int address, unsigned
         if (!(bp->type & type)) continue;
         if ((address <= (bp->address + bp->width)) && ((address + width) >= bp->address)) {
             ResetEvent(dbg_req->dbg_no_paused);
-            //dbg_req->dbg_paused = 1;
             break;
         }
     }
@@ -152,7 +151,6 @@ static void pause_debugger()
 
     dbg_req->dbg_trace = 1;
     ResetEvent(dbg_req->dbg_no_paused);
-    //dbg_req->dbg_paused = 1;
 }
 
 static void resume_debugger()
@@ -162,7 +160,6 @@ static void resume_debugger()
 
     dbg_req->dbg_trace = 0;
     SetEvent(dbg_req->dbg_no_paused);
-    //dbg_req->dbg_paused = 0;
 }
 
 static void detach_debugger()
@@ -494,7 +491,6 @@ static void process_request()
         {
             dbg_req->dbg_trace = 1;
             SetEvent(dbg_req->dbg_no_paused);
-            //dbg_req->dbg_paused = 0;
         }
     } break;
     case REQ_STEP_OVER:
@@ -517,7 +513,6 @@ static void process_request()
             }
 
             SetEvent(dbg_req->dbg_no_paused);
-            //dbg_req->dbg_paused = 0;
         }
     } break;
     default:
@@ -592,7 +587,6 @@ void process_breakpoints() {
     if ((!dbg_req->dbg_boot_found) && (pc == (unsigned int)(m68k_read_immediate_32(4)))) {
         dbg_req->dbg_boot_found = 1;
         ResetEvent(dbg_req->dbg_no_paused);
-        //dbg_req->dbg_paused = 1;
 
         dbg_req->dbg_evt.pc = pc;
         strncpy(dbg_req->dbg_evt.msg, "genplusgx", sizeof(dbg_req->dbg_evt.msg));
@@ -603,7 +597,6 @@ void process_breakpoints() {
     if (dbg_req->dbg_trace) {
         dbg_req->dbg_trace = 0;
         ResetEvent(dbg_req->dbg_no_paused);
-        //dbg_req->dbg_paused = 1;
 
         dbg_req->dbg_evt.pc = pc;
         dbg_req->dbg_evt.type = DBG_EVT_PAUSED;
@@ -614,13 +607,11 @@ void process_breakpoints() {
 
     int state = WaitForSingleObject(dbg_req->dbg_no_paused, 0);
     if (state == WAIT_OBJECT_0) {
-    // if (!dbg_req->dbg_paused) {
         if (dbg_req->dbg_step_over && pc == dbg_req->dbg_step_over_addr) {
             dbg_req->dbg_step_over = 0;
             dbg_req->dbg_step_over_addr = 0;
 
             ResetEvent(dbg_req->dbg_no_paused);
-            //dbg_req->dbg_paused = 1;
         }
 
         check_breakpoint(BPT_M68K_E, 1, pc, pc);

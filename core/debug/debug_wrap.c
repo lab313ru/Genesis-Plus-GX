@@ -59,8 +59,9 @@ int recv_dbg_event(int wait)
     return 1;
 }
 
-void send_dbg_request()
+void send_dbg_request(request_type_t type)
 {
+    dbg_req->req_type = type;
     ResetEvent(dbg_req->dbg_has_no_req);
     int state = WaitForSingleObject(dbg_req->dbg_has_no_req, INFINITE);
 }

@@ -12,7 +12,6 @@
 #define IDD_DISASM_REGS                 108
 #define ACCELERATOR_RESOURCE_ID         109
 #define ID_CANCEL                       1000
-#define IDC_LIST1                       1000
 #define IDC_BPT_LIST                    1000
 #define IDC_STEP_INTO                   1001
 #define IDC_STEP_OVER                   1002
@@ -78,18 +77,21 @@
 #define IDC_DEL_BREAK                   1061
 #define IDC_CLEAR_BREAKS                1062
 #define IDC_ADD_BREAK_POS_HK            1063
-#define IDC_SR_I_SPIN                   1064
-#define IDC_PAUSE_EMU_HK                1065
-#define IDC_SR_I_VAL                    1066
-#define IDC_SR_07                       1067
-#define IDC_SR_06                       1068
-#define IDC_SR_05                       1069
-#define IDC_SR_X                        1070
-#define IDC_SR_N                        1071
-#define IDC_SR_Z                        1072
-#define IDC_SR_V                        1073
-#define IDC_CHECK13                     1074
-#define IDC_SR_C                        1075
+#define IDC_VDP_BREAK                   1064
+#define IDC_VDP_BPT                     1065
+#define IDC_NO_HIGHLIGHT                1066
+#define IDC_SR_I_SPIN                   1067
+#define IDC_PAUSE_EMU_HK                1068
+#define IDC_SR_I_VAL                    1069
+#define IDC_SR_07                       1070
+#define IDC_SR_06                       1071
+#define IDC_SR_05                       1072
+#define IDC_SR_X                        1073
+#define IDC_SR_N                        1074
+#define IDC_SR_Z                        1075
+#define IDC_SR_V                        1076
+#define IDC_CHECK13                     1077
+#define IDC_SR_C                        1078
 #define IDC_VDP_REGISTERS_VSI           31032
 #define IDC_VDP_REGISTERS_HSI           31033
 #define IDC_VDP_REGISTERS_LCB           31034
@@ -211,7 +213,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        101
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1062
+#define _APS_NEXT_CONTROL_VALUE         1079
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

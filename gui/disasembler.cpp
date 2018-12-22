@@ -31,7 +31,7 @@ namespace cap
 #define BYTES_BEFORE_PC 0x30
 #define LINES_BEFORE_PC 15
 #define LINES_MAX 25
-#define DISASM_LISTING_BYTES 0x100
+#define DISASM_LISTING_BYTES 0x200
 #define ROM_CODE_START_ADDR ((unsigned int)0x200)
 #define RAM_START_ADDR ((unsigned int)0xFFFF0000)
 #define DISASM_LISTING_BKGN (RGB(0xCC, 0xFF, 0xFF))
@@ -67,6 +67,8 @@ static std::vector<extra_selection_t> extraSelections;
 
 static void init_highlighter()
 {
+    highlightingRules.clear();
+
     highlight_rule_t rule;
 
     keywordFormat.cbSize = sizeof(CHARFORMAT2);
@@ -74,168 +76,11 @@ static void init_highlighter()
     keywordFormat.dwMask = CFM_BOLD | CFM_COLOR;
     keywordFormat.dwEffects = CFE_BOLD;
 
-    std::list<std::string> keywordPatterns;
-    keywordPatterns.push_back("\\babcd\\b");
-    keywordPatterns.push_back("\\badd\\b");
-    keywordPatterns.push_back("\\badda\\b");
-    keywordPatterns.push_back("\\baddi\\b");
-    keywordPatterns.push_back("\\baddq\\b");
-    keywordPatterns.push_back("\\baddx\\b");
-    keywordPatterns.push_back("\\band\\b");
-    keywordPatterns.push_back("\\bandi\\b");
-    keywordPatterns.push_back("\\basl\\b");
-    keywordPatterns.push_back("\\basr\\b");
-    keywordPatterns.push_back("\\bbchg\\b");
-    keywordPatterns.push_back("\\bbclr\\b");
-    keywordPatterns.push_back("\\bbset\\b");
-    keywordPatterns.push_back("\\bbtst\\b");
-    keywordPatterns.push_back("\\bchk\\b");
-    keywordPatterns.push_back("\\bclr\\b");
-    keywordPatterns.push_back("\\bcmp\\b");
-    keywordPatterns.push_back("\\bcmpa\\b");
-    keywordPatterns.push_back("\\bcmpi\\b");
-    keywordPatterns.push_back("\\bcmpm\\b");
-    keywordPatterns.push_back("\\bdivs\\b");
-    keywordPatterns.push_back("\\bdivu\\b");
-    keywordPatterns.push_back("\\beor\\b");
-    keywordPatterns.push_back("\\beori\\b");
-    keywordPatterns.push_back("\\bexg\\b");
-    keywordPatterns.push_back("\\bext\\b");
-    keywordPatterns.push_back("\\bextb\\b");
-    keywordPatterns.push_back("\\billegal\\b");
-    keywordPatterns.push_back("\\blea\\b");
-    keywordPatterns.push_back("\\blink\\b");
-    keywordPatterns.push_back("\\blsl\\b");
-    keywordPatterns.push_back("\\blsr\\b");
-    keywordPatterns.push_back("\\bmove\\b");
-    keywordPatterns.push_back("\\bmovea\\b");
-    keywordPatterns.push_back("\\bmovem\\b");
-    keywordPatterns.push_back("\\bmovep\\b");
-    keywordPatterns.push_back("\\bmoveq\\b");
-    keywordPatterns.push_back("\\bmuls\\b");
-    keywordPatterns.push_back("\\bmulu\\b");
-    keywordPatterns.push_back("\\bnbcd\\b");
-    keywordPatterns.push_back("\\bneg\\b");
-    keywordPatterns.push_back("\\bnegx\\b");
-    keywordPatterns.push_back("\\bnop\\b");
-    keywordPatterns.push_back("\\bnot\\b");
-    keywordPatterns.push_back("\\bor\\b");
-    keywordPatterns.push_back("\\bori\\b");
-    keywordPatterns.push_back("\\breset\\b");
-    keywordPatterns.push_back("\\brol\\b");
-    keywordPatterns.push_back("\\bror\\b");
-    keywordPatterns.push_back("\\broxl\\b");
-    keywordPatterns.push_back("\\broxr\\b");
-    keywordPatterns.push_back("\\brte\\b");
-    keywordPatterns.push_back("\\brtr\\b");
-    keywordPatterns.push_back("\\brts\\b");
-    keywordPatterns.push_back("\\bsbcd\\b");
-    keywordPatterns.push_back("\\bscc\\b");
-    keywordPatterns.push_back("\\bsge\\b");
-    keywordPatterns.push_back("\\bsls\\b");
-    keywordPatterns.push_back("\\bspl\\b");
-    keywordPatterns.push_back("\\bscs\\b");
-    keywordPatterns.push_back("\\bsgt\\b");
-    keywordPatterns.push_back("\\bslt\\b");
-    keywordPatterns.push_back("\\bst\\b");
-    keywordPatterns.push_back("\\bseq\\b");
-    keywordPatterns.push_back("\\bshi\\b");
-    keywordPatterns.push_back("\\bsmi\\b");
-    keywordPatterns.push_back("\\bsvc\\b");
-    keywordPatterns.push_back("\\bsf\\b");
-    keywordPatterns.push_back("\\bsle\\b");
-    keywordPatterns.push_back("\\bsne\\b");
-    keywordPatterns.push_back("\\bsvs\\b");
-    keywordPatterns.push_back("\\bstop\\b");
-    keywordPatterns.push_back("\\bsub\\b");
-    keywordPatterns.push_back("\\bsuba\\b");
-    keywordPatterns.push_back("\\bsubi\\b");
-    keywordPatterns.push_back("\\bsubq\\b");
-    keywordPatterns.push_back("\\bsubx\\b");
-    keywordPatterns.push_back("\\bswap\\b");
-    keywordPatterns.push_back("\\btas\\b");
-    keywordPatterns.push_back("\\btrap\\b");
-    keywordPatterns.push_back("\\btrapv\\b");
-    keywordPatterns.push_back("\\btst\\b");
-    keywordPatterns.push_back("\\bunlk\\b");
-    keywordPatterns.push_back("\\bb\\b");
-    keywordPatterns.push_back("\\bw\\b");
-    keywordPatterns.push_back("\\bl\\b");
-    keywordPatterns.push_back("\\bs\\b");
-
-    keywordPatterns.push_back("\\bd0\\b");
-    keywordPatterns.push_back("\\bd1\\b");
-    keywordPatterns.push_back("\\bd2\\b");
-    keywordPatterns.push_back("\\bd3\\b");
-    keywordPatterns.push_back("\\bd4\\b");
-    keywordPatterns.push_back("\\bd5\\b");
-    keywordPatterns.push_back("\\bd6\\b");
-    keywordPatterns.push_back("\\bd7\\b");
-    keywordPatterns.push_back("\\ba0\\b");
-    keywordPatterns.push_back("\\ba1\\b");
-    keywordPatterns.push_back("\\ba2\\b");
-    keywordPatterns.push_back("\\ba3\\b");
-    keywordPatterns.push_back("\\ba4\\b");
-    keywordPatterns.push_back("\\ba5\\b");
-    keywordPatterns.push_back("\\ba6\\b");
-    keywordPatterns.push_back("\\ba7\\b");
-    keywordPatterns.push_back("\\bpc\\b");
-    keywordPatterns.push_back("\\bsr\\b");
-    keywordPatterns.push_back("\\bccr\\b");
-    keywordPatterns.push_back("\\bsp\\b");
-    keywordPatterns.push_back("\\busp\\b");
-    keywordPatterns.push_back("\\bssp\\b");
-    keywordPatterns.push_back("\\bisp\\b");
-    keywordPatterns.push_back("\\bbcc\\b");
-    keywordPatterns.push_back("\\bbhs\\b");
-    keywordPatterns.push_back("\\bbge\\b");
-    keywordPatterns.push_back("\\bbls\\b");
-    keywordPatterns.push_back("\\bbpl\\b");
-    keywordPatterns.push_back("\\bbcs\\b");
-    keywordPatterns.push_back("\\bblo\\b");
-    keywordPatterns.push_back("\\bbgt\\b");
-    keywordPatterns.push_back("\\bblt\\b");
-    keywordPatterns.push_back("\\bbeq\\b");
-    keywordPatterns.push_back("\\bbhi\\b");
-    keywordPatterns.push_back("\\bbmi\\b");
-    keywordPatterns.push_back("\\bbvc\\b");
-    keywordPatterns.push_back("\\bble\\b");
-    keywordPatterns.push_back("\\bbne\\b");
-    keywordPatterns.push_back("\\bbvs\\b");
-    keywordPatterns.push_back("\\bbra\\b");
-    keywordPatterns.push_back("\\bbsr\\b");
-    keywordPatterns.push_back("\\bdbra\\b");
-    keywordPatterns.push_back("\\bdbcc\\b");
-    keywordPatterns.push_back("\\bdbge\\b");
-    keywordPatterns.push_back("\\bdbls\\b");
-    keywordPatterns.push_back("\\bdbpl\\b");
-    keywordPatterns.push_back("\\bdbcs\\b");
-    keywordPatterns.push_back("\\bdbgt\\b");
-    keywordPatterns.push_back("\\bdblt\\b");
-    keywordPatterns.push_back("\\bdbt\\b");
-    keywordPatterns.push_back("\\bdbeq\\b");
-    keywordPatterns.push_back("\\bdbhi\\b");
-    keywordPatterns.push_back("\\bdbmi\\b");
-    keywordPatterns.push_back("\\bdbvc\\b");
-    keywordPatterns.push_back("\\bdbf\\b");
-    keywordPatterns.push_back("\\bdble\\b");
-    keywordPatterns.push_back("\\bdbne\\b");
-    keywordPatterns.push_back("\\bdbvs\\b");
-    keywordPatterns.push_back("\\bjmp\\b");
-    keywordPatterns.push_back("\\bjsr\\b");
-
-    for (std::string &pattern : keywordPatterns)
-    {
-        rule.pattern = std::regex(pattern);
-        rule.format = keywordFormat;
-        highlightingRules.push_back(rule);
-    }
-
     addressFormat.cbSize = sizeof(CHARFORMAT2);
     addressFormat.crTextColor = RGB(0x8B, 0, 0x8B); // darkMagenta
     addressFormat.dwMask = CFM_BOLD | CFM_COLOR;
     addressFormat.dwEffects = CFE_BOLD;
-    rule.pattern = std::regex("\\$\\b[A-Fa-f0-9]{1,8}\\b");
+    rule.pattern = std::regex("\\$\\b[A-Fa-f0-9]{1,8}\\b", std::regex::optimize | std::regex::nosubs);
     rule.format = addressFormat;
     highlightingRules.push_back(rule);
 
@@ -243,7 +88,7 @@ static void init_highlighter()
     hexValueFormat.crTextColor = RGB(0, 0x64, 0); // darkGreen
     hexValueFormat.dwMask = CFM_BOLD | CFM_COLOR;
     hexValueFormat.dwEffects = CFE_BOLD;
-    rule.pattern = std::regex("\\#\\$\\b[A-Fa-f0-9]{1,8}\\b");
+    rule.pattern = std::regex("\\#\\$\\b[A-Fa-f0-9]{1,8}\\b", std::regex::optimize | std::regex::nosubs);
     rule.format = hexValueFormat;
     highlightingRules.push_back(rule);
 
@@ -251,7 +96,7 @@ static void init_highlighter()
     lineAddrFormat.crTextColor = RGB(0, 0, 0); // black
     lineAddrFormat.dwMask = CFM_BOLD | CFM_COLOR;
     lineAddrFormat.dwEffects = CFE_BOLD;
-    rule.pattern = std::regex("^\\b[A-Fa-f0-9]{6,8}\\b");
+    rule.pattern = std::regex("^\\b[A-Fa-f0-9]{6,8}\\b", std::regex::optimize | std::regex::nosubs);
     rule.format = lineAddrFormat;
     highlightingRules.push_back(rule);
 }
@@ -284,14 +129,18 @@ static void highligh_blocks()
 {
     LockWindowUpdate(listHwnd);
     SendMessage(listHwnd, EM_HIDESELECTION, 1, 0);
+
+    const char *text = cliptext.c_str();
+    const char *text_end = text + cliptext.length();
     for (const highlight_rule_t &rule : highlightingRules)
     {
-        for (std::sregex_iterator i = std::sregex_iterator(cliptext.cbegin(), cliptext.cend(), rule.pattern); i != std::sregex_iterator(); ++i)
+        for (std::cregex_iterator i = std::cregex_iterator(text, text_end, rule.pattern); i != std::cregex_iterator(); ++i)
         {
-            std::smatch m = *i;
+            std::cmatch m = *i;
             set_selection_format((int)m.position(0), (int)m.length(0), &rule.format);
         }
     }
+    
     SendMessage(listHwnd, EM_HIDESELECTION, 0, 0);
     LockWindowUpdate(NULL);
 }
@@ -539,15 +388,13 @@ static void set_m68k_reg(int reg_index, unsigned int value)
     dbg_req->data.regs_data.type = REG_TYPE_M68K;
     dbg_req->data.regs_data.data.any_reg.index = reg_index;
     dbg_req->data.regs_data.data.any_reg.val = value;
-    dbg_req->req_type = REQ_SET_REG;
-    send_dbg_request();
+    send_dbg_request(REQ_SET_REG);
 }
 
 static void update_regs()
 {
     dbg_req->data.regs_data.type = REG_TYPE_M68K;
-    dbg_req->req_type = REQ_GET_REGS;
-    send_dbg_request();
+    send_dbg_request(REQ_GET_REGS);
 
     regs_68k_data_t *reg_vals = &dbg_req->data.regs_data.data.regs_68k.values;
 
@@ -616,7 +463,8 @@ static void set_listing_font(const char *strFont, int nSize)
     memset(&cfFormat, 0, sizeof(cfFormat));
     cfFormat.cbSize = sizeof(cfFormat);
     cfFormat.crTextColor = RGB(0, 0, 0x8B);
-    cfFormat.dwMask = CFM_CHARSET | CFM_FACE | CFM_SIZE | CFM_COLOR;
+    cfFormat.dwMask = CFM_CHARSET | CFM_FACE | CFM_SIZE | CFM_COLOR | CFM_BOLD;
+    cfFormat.dwEffects = CFE_BOLD;
     cfFormat.bCharSet = ANSI_CHARSET;
     cfFormat.bPitchAndFamily = FIXED_PITCH | FF_DONTCARE;
     cfFormat.yHeight = (nSize * 1440) / 72;
@@ -831,8 +679,7 @@ static void update_disasm_listing(unsigned int pc)
     pc = max(pc - BYTES_BEFORE_PC, (pc < MAXROMSIZE) ? ROM_CODE_START_ADDR : RAM_START_ADDR);
     dbg_req->data.mem_data.address = pc;
     dbg_req->data.mem_data.size = DISASM_LISTING_BYTES;
-    dbg_req->req_type = (pc < MAXROMSIZE) ? REQ_READ_68K_ROM : REQ_READ_68K_RAM;
-    send_dbg_request();
+    send_dbg_request((pc < MAXROMSIZE) ? REQ_READ_68K_ROM : REQ_READ_68K_RAM);
 
     get_disasm_listing_pc(
         real_pc,
@@ -843,8 +690,7 @@ static void update_disasm_listing(unsigned int pc)
 
 static void update_bpt_list()
 {
-    dbg_req->req_type = REQ_LIST_BREAKS;
-    send_dbg_request();
+    send_dbg_request(REQ_LIST_BREAKS);
 
     ListView_SetItemCount(GetDlgItem(disHwnd, IDC_BPT_LIST), dbg_req->bpt_list.count);
 }
@@ -981,7 +827,37 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             } break;
             case 2: // Type
             {
-                snprintf(tmp, sizeof(tmp), "%s", bpt_type_string[bpt_data->type]);
+                switch (bpt_data->type)
+                {
+                case BPT_M68K_E: snprintf(tmp, sizeof(tmp), "%s", "M68K_E"); break;
+                case BPT_Z80_E: snprintf(tmp, sizeof(tmp), "%s", "Z80_E"); break;
+                case BPT_M68K_R: snprintf(tmp, sizeof(tmp), "%s", "M68K_R"); break;
+                case BPT_M68K_W: snprintf(tmp, sizeof(tmp), "%s", "M68K_W"); break;
+                case BPT_M68K_RW: snprintf(tmp, sizeof(tmp), "%s", "M68K_RW"); break;
+
+                // VDP
+                case BPT_VRAM_R: snprintf(tmp, sizeof(tmp), "%s", "VRAM_R"); break;
+                case BPT_VRAM_W: snprintf(tmp, sizeof(tmp), "%s", "VRAM_W"); break;
+                case BPT_VRAM_RW: snprintf(tmp, sizeof(tmp), "%s", "VRAM_RW"); break;
+
+                case BPT_CRAM_R: snprintf(tmp, sizeof(tmp), "%s", "CRAM_R"); break;
+                case BPT_CRAM_W: snprintf(tmp, sizeof(tmp), "%s", "CRAM_W"); break;
+                case BPT_CRAM_RW: snprintf(tmp, sizeof(tmp), "%s", "CRAM_RW"); break;
+
+                case BPT_VSRAM_R: snprintf(tmp, sizeof(tmp), "%s", "VSRAM_R"); break;
+                case BPT_VSRAM_W: snprintf(tmp, sizeof(tmp), "%s", "VSRAM_W"); break;
+                case BPT_VSRAM_RW: snprintf(tmp, sizeof(tmp), "%s", "VSRAM_RW"); break;
+
+                // Z80
+                case BPT_Z80_R: snprintf(tmp, sizeof(tmp), "%s", "Z80_R"); break;
+                case BPT_Z80_W: snprintf(tmp, sizeof(tmp), "%s", "Z80_W"); break;
+                case BPT_Z80_RW: snprintf(tmp, sizeof(tmp), "%s", "Z80_RW"); break;
+
+                // REGS
+                case BPT_VDP_REG:
+                case BPT_M68K_REG:
+                    break;
+                }
                 plvdi->item.pszText = tmp;
             } break;
             default:
@@ -1130,23 +1006,20 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             if (!paused)
                 break;
 
-            dbg_req->req_type = REQ_STEP_INTO;
-            send_dbg_request();
+            send_dbg_request(REQ_STEP_INTO);
             break;
         case IDC_STEP_OVER:
         case IDC_STEP_OVER_HK:
             if (!paused)
                 break;
 
-            dbg_req->req_type = REQ_STEP_OVER;
-            send_dbg_request();
+            send_dbg_request(REQ_STEP_OVER);
             break;
         case IDC_RUN_EMU:
         case IDC_RUN_EMU_HK:
             if (!paused)
                 break;
-            dbg_req->req_type = REQ_RESUME;
-            send_dbg_request();
+            send_dbg_request(REQ_RESUME);
             paused = false;
             break;
         case IDC_PAUSE_EMU:
@@ -1154,8 +1027,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             if (paused)
                 break;
 
-            dbg_req->req_type = REQ_PAUSE;
-            send_dbg_request();
+            send_dbg_request(REQ_PAUSE);
             paused = true;
             break;
         case IDC_ADD_BREAK_POS_HK:
@@ -1172,7 +1044,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                     bpt_data->address = address;
                     bpt_data->type = BPT_M68K_E;
                     bpt_data->width = 1;
-                    dbg_req->req_type = REQ_DEL_BREAK;
+                    send_dbg_request(REQ_DEL_BREAK);
                     was_deleted = true;
                     break;
                 }
@@ -1184,10 +1056,9 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                 bpt_data->address = address;
                 bpt_data->type = BPT_M68K_E;
                 bpt_data->width = 1;
-                dbg_req->req_type = REQ_ADD_BREAK;
+                send_dbg_request(REQ_ADD_BREAK);
             }
 
-            send_dbg_request();
             update_dbg_window_info();
         } break;
         case IDC_ADD_BREAK:
@@ -1204,10 +1075,24 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             default: bpt_data->width = 1; break;
             }
 
-            bpt_data->type = (bpt_type_t)(IsDlgButtonChecked(disHwnd, IDC_EXEC_BPT) ? BPT_M68K_E :
-                ((IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ) ? BPT_M68K_R : 0) | (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE) ? BPT_M68K_W : 0)));
-            dbg_req->req_type = REQ_ADD_BREAK;
-            send_dbg_request();
+            if (IsDlgButtonChecked(disHwnd, IDC_EXEC_BPT))
+                bpt_data->type = BPT_M68K_E;
+            else if (IsDlgButtonChecked(disHwnd, IDC_MEM_BPT))
+            {
+                if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ))
+                    bpt_data->type = BPT_M68K_R;
+                if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE))
+                    bpt_data->type = (bpt_type_t)((int)bpt_data->type | (int)BPT_M68K_W);
+            }
+            else if (IsDlgButtonChecked(disHwnd, IDC_VDP_BPT))
+            {
+                if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ))
+                    bpt_data->type = BPT_VRAM_R;
+                if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE))
+                    bpt_data->type = (bpt_type_t)((int)bpt_data->type | (int)BPT_VRAM_W);
+            }
+
+            send_dbg_request(REQ_ADD_BREAK);
             update_dbg_window_info();
         } break;
         case IDC_DEL_BREAK:
@@ -1221,14 +1106,12 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
                 bpt_data->address = bpt_item->address;
                 bpt_data->type = bpt_item->type;
-                dbg_req->req_type = REQ_DEL_BREAK;
-                send_dbg_request();
+                send_dbg_request(REQ_DEL_BREAK);
                 update_dbg_window_info();
             }
         } break;
         case IDC_CLEAR_BREAKS:
-            dbg_req->req_type = REQ_CLEAR_BREAKS;
-            send_dbg_request();
+            send_dbg_request(REQ_CLEAR_BREAKS);
             update_dbg_window_info();
         }
 
