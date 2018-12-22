@@ -18,7 +18,7 @@
 
 #include "resource.h"
 
-#include "debug.h"
+#include "debug_wrap.h"
 
 namespace cap
 {
@@ -876,7 +876,7 @@ static void do_game_stopped()
 
 static void check_debugger_events()
 {
-    if (!is_debugger_active())
+    if (!dbg_req->dbg_active)
         return;
 
     if (!recv_dbg_event(0))
@@ -893,7 +893,7 @@ static void check_debugger_events()
         break;
     }
 
-    dbg_event->type = DBG_EVT_NO_EVENT;
+    ResetEvent(dbg_req->dbg_has_event);
 }
 
 LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -1238,6 +1238,10 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     {
         KillTimer(hWnd, UPDATE_DISASM_TIMER);
         KillTimer(hWnd, DBG_EVENTS_TIMER);
+
+        dbg_req->stop_debugging();
+        unwrap_debugger();
+
         PostQuitMessage(0);
         EndDialog(hWnd, 0);
     } break;
@@ -1301,20 +1305,21 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
 void create_disassembler()
 {
-    start_debugging();
+    activate_shared_mem();
+    wrap_debugger();
+    dbg_req->start_debugging();
     hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
 }
 
 void destroy_disassembler()
 {
-    stop_debugging();
     DestroyWindow(disHwnd);
     TerminateThread(hThread, 0);
     CloseHandle(hThread);
+    deactivate_shared_mem();
 }
 
 void update_disassembler()
 {
-    if (is_debugger_active())
-        handle_dbg_commands();
+    dbg_req->handle_request();
 }

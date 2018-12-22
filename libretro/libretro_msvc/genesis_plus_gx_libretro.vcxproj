@@ -202,6 +202,7 @@
     <ClCompile Include="..\..\core\cd_hw\pcm.c" />
     <ClCompile Include="..\..\core\cd_hw\scd.c" />
     <ClCompile Include="..\..\core\debug\debug.c" />
+    <ClCompile Include="..\..\core\debug\debug_wrap.c" />
     <ClCompile Include="..\..\core\genesis.c" />
     <ClCompile Include="..\..\core\input_hw\activator.c" />
     <ClCompile Include="..\..\core\input_hw\gamepad.c" />
@@ -326,6 +327,7 @@
     <ClInclude Include="..\..\core\cd_hw\pcm.h" />
     <ClInclude Include="..\..\core\cd_hw\scd.h" />
     <ClInclude Include="..\..\core\debug\debug.h" />
+    <ClInclude Include="..\..\core\debug\debug_wrap.h" />
     <ClInclude Include="..\..\core\genesis.h" />
     <ClInclude Include="..\..\core\input_hw\activator.h" />
     <ClInclude Include="..\..\core\input_hw\gamepad.h" />

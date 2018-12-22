@@ -1,7 +1,5 @@
 .vs/
-Debug/
-Release/
-
+libretro_msvc/
 psp2/*.o
 psp2/*.elf
 psp2/*.velf
