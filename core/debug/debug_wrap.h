@@ -116,25 +116,21 @@ typedef struct {
     register_type_t type;
     
     union {
-        union {
-            regs_68k_data_t values;
-            unsigned int array[20];
-        } regs_68k;
-        reg_val_t any_reg;
-        unsigned char regs_vdp[0x20];
-        regs_z80_data_t regs_z80;
-    } data;
+        regs_68k_data_t values;
+        unsigned int array[20];
+    } regs_68k;
+    reg_val_t any_reg;
+    unsigned char regs_vdp[0x20];
+    regs_z80_data_t regs_z80;
 } register_data_t;
 
 typedef struct {
     int size;
     unsigned int address;
 
-    union {
-        unsigned char m68k_rom[0xA00000];
-        unsigned char m68k_ram[0x10000];
-        unsigned char z80_ram[0x2000];
-    } data;
+    unsigned char m68k_rom[0xA00000];
+    unsigned char m68k_ram[0x10000];
+    unsigned char z80_ram[0x2000];
 } memory_data_t;
 
 typedef struct {
@@ -150,16 +146,15 @@ typedef struct {
 
 typedef struct {
     request_type_t req_type;
-    union {
-        register_data_t regs_data;
-        memory_data_t mem_data;
-        bpt_data_t bpt_data;
-    } data;
+    register_data_t regs_data;
+    memory_data_t mem_data;
+    bpt_data_t bpt_data;
     debugger_event_t dbg_evt;
     bpt_list_t bpt_list;
     int dbg_boot_found;
     int dbg_active, dbg_trace, dbg_dont_check_bp;
-    HANDLE dbg_no_paused, dbg_has_event, dbg_has_no_req;
+    int dbg_paused;
+    //HANDLE dbg_no_paused, dbg_has_event, dbg_has_no_req;
     int dbg_step_over;
     unsigned int dbg_step_over_addr;
 

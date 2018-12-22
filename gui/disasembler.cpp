@@ -27,7 +27,6 @@ namespace cap
 
 #define MAXROMSIZE ((unsigned int)0xA00000)
 #define DBG_EVENTS_TIMER 1
-#define UPDATE_DISASM_TIMER 2
 #define BYTES_BEFORE_PC 0x30
 #define LINES_BEFORE_PC 15
 #define LINES_MAX 25
@@ -385,18 +384,18 @@ static unsigned short update_sr_reg()
 
 static void set_m68k_reg(int reg_index, unsigned int value)
 {
-    dbg_req->data.regs_data.type = REG_TYPE_M68K;
-    dbg_req->data.regs_data.data.any_reg.index = reg_index;
-    dbg_req->data.regs_data.data.any_reg.val = value;
+    dbg_req->regs_data.type = REG_TYPE_M68K;
+    dbg_req->regs_data.any_reg.index = reg_index;
+    dbg_req->regs_data.any_reg.val = value;
     send_dbg_request(REQ_SET_REG);
 }
 
 static void update_regs()
 {
-    dbg_req->data.regs_data.type = REG_TYPE_M68K;
+    dbg_req->regs_data.type = REG_TYPE_M68K;
     send_dbg_request(REQ_GET_REGS);
 
-    regs_68k_data_t *reg_vals = &dbg_req->data.regs_data.data.regs_68k.values;
+    regs_68k_data_t *reg_vals = &dbg_req->regs_data.regs_68k.values;
 
     last_pc = reg_vals->pc;
 
@@ -594,9 +593,11 @@ static void update_disasm_with_bpt_list(unsigned int pc)
     for (int i = 0; i < dbg_req->bpt_list.count; ++i)
     {
         bpt_data_t *bpt_data = &dbg_req->bpt_list.breaks[i];
-        addExtraSelection(bpt_data->address, BPT_COLOR);
 
-        if (bpt_data->address == pc)
+        if (bpt_data->type == BPT_M68K_E)
+            addExtraSelection(bpt_data->address, BPT_COLOR);
+
+        if (bpt_data->type == BPT_M68K_E && bpt_data->address == pc)
             changeExtraSelection(pc, BPT_COLOR_PC);
     }
 
@@ -618,8 +619,16 @@ static void get_disasm_listing_pc(unsigned int pc, const unsigned char *code, si
 
     bool ep_fixed = false;
 
-    while (lines < max_lines && code_size && cs_disasm_iter(cs_handle, &code_ptr, &code_size, &address, insn))
+    while (lines < max_lines && code_size)
     {
+        while (!cs_disasm_iter(cs_handle, &code_ptr, &code_size, &address, insn))
+        {
+            code_ptr += 2;
+            address += 2;
+            code_size -= 2;
+        }
+
+
         if (!ep_fixed && insn->address >= pc)
         {
             pc_line = lines;
@@ -677,14 +686,14 @@ static void update_disasm_listing(unsigned int pc)
     unsigned int real_pc = pc;
 
     pc = max(pc - BYTES_BEFORE_PC, (pc < MAXROMSIZE) ? ROM_CODE_START_ADDR : RAM_START_ADDR);
-    dbg_req->data.mem_data.address = pc;
-    dbg_req->data.mem_data.size = DISASM_LISTING_BYTES;
+    dbg_req->mem_data.address = pc;
+    dbg_req->mem_data.size = DISASM_LISTING_BYTES;
     send_dbg_request((pc < MAXROMSIZE) ? REQ_READ_68K_ROM : REQ_READ_68K_RAM);
 
     get_disasm_listing_pc(
         real_pc,
-        (pc < MAXROMSIZE) ? &dbg_req->data.mem_data.data.m68k_rom[pc] : &dbg_req->data.mem_data.data.m68k_ram[pc - RAM_START_ADDR],
-        dbg_req->data.mem_data.size,
+        (pc < MAXROMSIZE) ? &dbg_req->mem_data.m68k_rom[pc] : &dbg_req->mem_data.m68k_ram[pc - RAM_START_ADDR],
+        dbg_req->mem_data.size,
         LINES_MAX);
 }
 
@@ -695,12 +704,15 @@ static void update_bpt_list()
     ListView_SetItemCount(GetDlgItem(disHwnd, IDC_BPT_LIST), dbg_req->bpt_list.count);
 }
 
-static void update_dbg_window_info()
+static void update_dbg_window_info(bool update_registers, bool update_bpts, bool update_listing)
 {
     LockWindowUpdate(disHwnd);
-    update_regs();
-    update_bpt_list();
-    update_disasm_listing(last_pc);
+    if (update_registers)
+        update_regs();
+    if (update_bpts)
+        update_bpt_list();
+    if (update_listing)
+        update_disasm_listing(last_pc);
     LockWindowUpdate(NULL);
 }
 
@@ -711,7 +723,7 @@ static void do_game_started(unsigned int pc)
 static void do_game_paused(unsigned int pc)
 {
     paused = true;
-    update_dbg_window_info();
+    update_dbg_window_info(true, false, true);
 
     SetForegroundWindow(disHwnd);
 }
@@ -739,7 +751,7 @@ static void check_debugger_events()
         break;
     }
 
-    ResetEvent(dbg_req->dbg_has_event);
+    dbg_req->dbg_evt.type = DBG_EVT_NO_EVENT;
 }
 
 LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -782,18 +794,12 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         SendMessage(GetDlgItem(hWnd, IDC_SR_I_SPIN), UDM_SETRANGE, 0, MAKELPARAM(100,0));
 
         SetTimer(hWnd, DBG_EVENTS_TIMER, 10, NULL);
-        SetTimer(hWnd, UPDATE_DISASM_TIMER, 2000, NULL);
     } break;
     case WM_TIMER:
     {
         switch (LOWORD(wParam))
         {
         case DBG_EVENTS_TIMER: check_debugger_events(); break;
-        case UPDATE_DISASM_TIMER:
-        {
-            if (!paused)
-                update_dbg_window_info();
-        } break;
         }
         return FALSE;
     } break;
@@ -1040,7 +1046,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             {
                 if (address == dbg_req->bpt_list.breaks[i].address)
                 {
-                    bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+                    bpt_data_t *bpt_data = &dbg_req->bpt_data;
                     bpt_data->address = address;
                     bpt_data->type = BPT_M68K_E;
                     bpt_data->width = 1;
@@ -1052,18 +1058,18 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
             if (!was_deleted)
             {
-                bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+                bpt_data_t *bpt_data = &dbg_req->bpt_data;
                 bpt_data->address = address;
                 bpt_data->type = BPT_M68K_E;
                 bpt_data->width = 1;
                 send_dbg_request(REQ_ADD_BREAK);
             }
 
-            update_dbg_window_info();
+            update_dbg_window_info(false, true, true);
         } break;
         case IDC_ADD_BREAK:
         {
-            bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+            bpt_data_t *bpt_data = &dbg_req->bpt_data;
             bpt_data->address = GetDlgItemHex(disHwnd, IDC_BPT_ADDR);
             bpt_data->address += (bpt_data->address < MAXROMSIZE) ? 0 : 0xFF000000;
             int bpt_type = (int)SendMessage(GetDlgItem(disHwnd, IDC_BPT_SIZE), CB_GETCURSEL, 0, 0);
@@ -1077,27 +1083,49 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
             if (IsDlgButtonChecked(disHwnd, IDC_EXEC_BPT))
                 bpt_data->type = BPT_M68K_E;
-            else if (IsDlgButtonChecked(disHwnd, IDC_MEM_BPT))
+            else if (IsDlgButtonChecked(disHwnd, IDC_68K_RAM_BPT))
             {
                 if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ))
                     bpt_data->type = BPT_M68K_R;
                 if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE))
                     bpt_data->type = (bpt_type_t)((int)bpt_data->type | (int)BPT_M68K_W);
             }
-            else if (IsDlgButtonChecked(disHwnd, IDC_VDP_BPT))
+            else if (IsDlgButtonChecked(disHwnd, IDC_VRAM_BPT))
             {
                 if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ))
                     bpt_data->type = BPT_VRAM_R;
                 if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE))
                     bpt_data->type = (bpt_type_t)((int)bpt_data->type | (int)BPT_VRAM_W);
             }
+            else if (IsDlgButtonChecked(disHwnd, IDC_CRAM_BPT))
+            {
+                if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ))
+                    bpt_data->type = BPT_CRAM_R;
+                if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE))
+                    bpt_data->type = (bpt_type_t)((int)bpt_data->type | (int)BPT_CRAM_W);
+            }
+            else if (IsDlgButtonChecked(disHwnd, IDC_VSRAM_BPT))
+            {
+                if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ))
+                    bpt_data->type = BPT_VSRAM_R;
+                if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE))
+                    bpt_data->type = (bpt_type_t)((int)bpt_data->type | (int)BPT_VSRAM_W);
+            }
+            else if (IsDlgButtonChecked(disHwnd, IDC_Z80_RAM_BPT))
+            {
+                if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_READ))
+                    bpt_data->type = BPT_Z80_R;
+                if (IsDlgButtonChecked(disHwnd, IDC_BPT_IS_WRITE))
+                    bpt_data->type = (bpt_type_t)((int)bpt_data->type | (int)BPT_Z80_W);
+            }
 
             send_dbg_request(REQ_ADD_BREAK);
-            update_dbg_window_info();
+
+            update_dbg_window_info(false, true, (bpt_data->type == BPT_M68K_E) ? true : false);
         } break;
         case IDC_DEL_BREAK:
         {
-            bpt_data_t *bpt_data = &dbg_req->data.bpt_data;
+            bpt_data_t *bpt_data = &dbg_req->bpt_data;
             int index = ListView_GetNextItem(GetDlgItem(disHwnd, IDC_BPT_LIST), -1, LVNI_SELECTED);
 
             if (index != -1)
@@ -1107,19 +1135,18 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                 bpt_data->address = bpt_item->address;
                 bpt_data->type = bpt_item->type;
                 send_dbg_request(REQ_DEL_BREAK);
-                update_dbg_window_info();
+                update_dbg_window_info(false, true, (bpt_item->type == BPT_M68K_E) ? true : false);
             }
         } break;
         case IDC_CLEAR_BREAKS:
             send_dbg_request(REQ_CLEAR_BREAKS);
-            update_dbg_window_info();
-        }
+            update_dbg_window_info(false, true, true);
+        } break;
 
         return TRUE;
     } break;
     case WM_DESTROY:
     {
-        KillTimer(hWnd, UPDATE_DISASM_TIMER);
         KillTimer(hWnd, DBG_EVENTS_TIMER);
 
         dbg_req->stop_debugging();
@@ -1142,9 +1169,9 @@ static bool openCapstone()
     skipdata.mnemonic = "dc.b";
     skipdata.user_data = NULL;
 
-    cap::cs_option(cs_handle, cap::CS_OPT_SKIPDATA_SETUP, (size_t)&skipdata);
+    //cap::cs_option(cs_handle, cap::CS_OPT_SKIPDATA_SETUP, (size_t)&skipdata);
 
-    cap::cs_option(cs_handle, cap::CS_OPT_SKIPDATA, cap::CS_OPT_ON);
+    //cap::cs_option(cs_handle, cap::CS_OPT_SKIPDATA, cap::CS_OPT_ON);
 
     return error;
 }

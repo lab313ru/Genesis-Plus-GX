@@ -68,7 +68,7 @@
 #define IDC_RUN_EMU_HK                  1052
 #define IDC_SR_0B                       1053
 #define IDC_EXEC_BPT                    1054
-#define IDC_MEM_BPT                     1055
+#define IDC_68K_RAM_BPT                 1055
 #define IDC_BPT_ADDR                    1056
 #define IDC_BPT_SIZE                    1057
 #define IDC_BPT_IS_READ                 1058
@@ -78,10 +78,11 @@
 #define IDC_CLEAR_BREAKS                1062
 #define IDC_ADD_BREAK_POS_HK            1063
 #define IDC_VDP_BREAK                   1064
-#define IDC_VDP_BPT                     1065
-#define IDC_NO_HIGHLIGHT                1066
+#define IDC_VRAM_BPT                    1065
+#define IDC_CRAM_BPT                    1066
 #define IDC_SR_I_SPIN                   1067
 #define IDC_PAUSE_EMU_HK                1068
+#define IDC_VSRAM_BPT                   1068
 #define IDC_SR_I_VAL                    1069
 #define IDC_SR_07                       1070
 #define IDC_SR_06                       1071
@@ -90,8 +91,8 @@
 #define IDC_SR_N                        1074
 #define IDC_SR_Z                        1075
 #define IDC_SR_V                        1076
-#define IDC_CHECK13                     1077
-#define IDC_SR_C                        1078
+#define IDC_SR_C                        1077
+#define IDC_Z80_RAM_BPT                 1078
 #define IDC_VDP_REGISTERS_VSI           31032
 #define IDC_VDP_REGISTERS_HSI           31033
 #define IDC_VDP_REGISTERS_LCB           31034

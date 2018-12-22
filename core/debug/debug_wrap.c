@@ -38,23 +38,20 @@ void deactivate_shared_mem()
 void wrap_debugger()
 {
     dbg_req->start_debugging = start_debugging;
-    dbg_req->dbg_no_paused = CreateEvent(NULL, TRUE, FALSE, "GX_DBG_NO_PAUSED");
-    dbg_req->dbg_has_event = CreateEvent(NULL, TRUE, FALSE, "GX_DBG_HAS_EVENT");
-    dbg_req->dbg_has_no_req = CreateEvent(NULL, TRUE, TRUE, "GX_DBG_HAS_NO_REQ");
 }
 
 void unwrap_debugger()
 {
-    CloseHandle(dbg_req->dbg_no_paused);
-    CloseHandle(dbg_req->dbg_has_event);
-    CloseHandle(dbg_req->dbg_has_no_req);
 }
 
 int recv_dbg_event(int wait)
 {
-    int state = WaitForSingleObject(dbg_req->dbg_has_event, wait ? INFINITE : 0);
-    if (!wait && state == WAIT_TIMEOUT)
-        return 0;
+    while (dbg_req->dbg_evt.type == DBG_EVT_NO_EVENT)
+    {
+        if (!wait)
+            return 0;
+        Sleep(10);
+    }
 
     return 1;
 }
@@ -62,6 +59,9 @@ int recv_dbg_event(int wait)
 void send_dbg_request(request_type_t type)
 {
     dbg_req->req_type = type;
-    ResetEvent(dbg_req->dbg_has_no_req);
-    int state = WaitForSingleObject(dbg_req->dbg_has_no_req, INFINITE);
+
+    while (dbg_req->req_type != REQ_NO_REQUEST)
+    {
+        Sleep(10);
+    }
 }
