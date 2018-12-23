@@ -3,6 +3,7 @@
 #include "vdp_ram_debug.h"
 #include "hex_editor.h"
 #include "disassembler.h"
+#include "debug.h"
 
 HWND dbg_window = NULL;
 HINSTANCE dbg_wnd_hinst = NULL;
@@ -138,7 +139,7 @@ void run_gui()
     create_plane_explorer();
     create_vdp_ram_debug();
     create_hex_editor();
-    create_disassembler();
+    //create_disassembler();
 }
 
 void update_gui()
@@ -146,7 +147,8 @@ void update_gui()
     update_plane_explorer();
     update_vdp_ram_debug();
     update_hex_editor();
-    update_disassembler();
+    handle_request();
+    //update_disassembler();
 }
 
 void stop_gui()
@@ -154,7 +156,7 @@ void stop_gui()
     destroy_plane_explorer();
     destroy_vdp_ram_debug();
     destroy_hex_editor();
-    destroy_disassembler();
+    //destroy_disassembler();
 
     disable_visual_styles();
 }

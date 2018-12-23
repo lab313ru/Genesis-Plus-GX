@@ -1,67 +1,63 @@
 #include <Windows.h>
 #include <process.h>
 
-#include "debug.h"
+#include "debug_wrap.h"
 
-static HANDLE hMapFile;
+static HANDLE hMapFile = NULL, hStartFunc = NULL;
 
-int activate_shared_mem()
+dbg_request_t *open_shared_mem()
 {
-    hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(dbg_request_t), SHARED_MEM_NAME);
+    hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, FALSE, SHARED_MEM_NAME);
 
     if (hMapFile == NULL)
     {
-        return -1;
+        return NULL;
     }
 
-    dbg_req = (dbg_request_t*)MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(dbg_request_t));
+    dbg_request_t *request = (dbg_request_t *)MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(dbg_request_t));
 
-    if (dbg_req == NULL)
+    if (request == NULL)
     {
         CloseHandle(hMapFile);
-        return -1;
+        return NULL;
     }
 
-    memset(dbg_req, 0, sizeof(dbg_request_t));
-
-    return 0;
+    return request;
 }
 
-void deactivate_shared_mem()
+void close_shared_mem(dbg_request_t **request)
 {
-    UnmapViewOfFile(dbg_req);
+    UnmapViewOfFile(*request);
     CloseHandle(hMapFile);
     hMapFile = NULL;
-    dbg_req = NULL;
+    *request = NULL;
 }
 
-void wrap_debugger()
+int recv_dbg_event(dbg_request_t *request, int wait)
 {
-    dbg_req->start_debugging = start_debugging;
-}
-
-void unwrap_debugger()
-{
-}
-
-int recv_dbg_event(int wait)
-{
-    while (dbg_req->dbg_evt.type == DBG_EVT_NO_EVENT)
+    while (1)
     {
+        for (int i = 0; i < ((request->dbg_events_count > 0) ? MAX_BREAKPOINTS : 0); ++i)
+        {
+            if (request->dbg_events[i].type != DBG_EVT_NO_EVENT)
+            {
+                request->dbg_events_count -= 1;
+                return i;
+            }
+        }
+
         if (!wait)
-            return 0;
-        Sleep(10);
+            return -1;
+        Sleep(1);
     }
-
-    return 1;
 }
 
-void send_dbg_request(request_type_t type)
+void send_dbg_request(dbg_request_t *request, request_type_t type)
 {
-    dbg_req->req_type = type;
+    request->req_type = type;
 
-    while (dbg_req->req_type != REQ_NO_REQUEST)
+    while (request->dbg_active && request->req_type != REQ_NO_REQUEST)
     {
-        Sleep(10);
+        Sleep(1);
     }
 }

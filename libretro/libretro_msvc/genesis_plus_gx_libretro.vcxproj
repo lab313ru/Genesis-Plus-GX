@@ -75,7 +75,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>d:\git\RetroArch_fork\pkg\msvc\x64\Debug\cores\</OutDir>
+    <OutDir>d:\git\RetroArch_fork\pkg\msvc\x64\Release\cores\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -110,7 +110,7 @@
       <AdditionalIncludeDirectories>../../core/cd_hw/libchdr/src;../../core/cd_hw/libchdr/deps/libFLAC/include;../../core/cd_hw/libchdr/deps/lzma;../../core/cd_hw/libchdr/deps/zlib;../../core;../../core/debug/;../../core/z80;../../core/m68k;../../core/ntsc;../../core/sound;../../core/input_hw;../../core/cd_hw;../../core/cart_hw;../../core/cart_hw/svp;../../libretro;../../libretro/libretro-common/include;../../gui;../../gui/capstone;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>Comctl32.lib;capstone_64d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>../../gui/capstone;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

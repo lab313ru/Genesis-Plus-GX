@@ -10,8 +10,10 @@ extern "C" {
 
 #define SHARED_MEM_NAME "GX_PLUS_SHARED_MEM"
 #define MAX_BREAKPOINTS 1000
+#define MAX_DBG_EVENTS 20
+#define MAXROMSIZE ((unsigned int)0xA00000)
 
-#pragma pack(push, 1)
+#pragma pack(push, 4)
 typedef enum {
     BPT_ANY = (0 << 0),
     // M68K
@@ -69,7 +71,7 @@ typedef enum {
 
     REQ_PAUSE,
     REQ_RESUME,
-    REQ_DETACH,
+    REQ_STOP,
 
     REQ_STEP_INTO,
     REQ_STEP_OVER,
@@ -86,6 +88,8 @@ typedef enum {
     DBG_EVT_NO_EVENT,
     DBG_EVT_STARTED,
     DBG_EVT_PAUSED,
+    DBG_EVT_BREAK,
+    DBG_EVT_STEP,
     DBG_EVT_STOPPED,
 } dbg_event_type_t;
 
@@ -128,7 +132,7 @@ typedef struct {
     int size;
     unsigned int address;
 
-    unsigned char m68k_rom[0xA00000];
+    unsigned char m68k_rom[MAXROMSIZE];
     unsigned char m68k_ram[0x10000];
     unsigned char z80_ram[0x2000];
 } memory_data_t;
@@ -149,30 +153,17 @@ typedef struct {
     register_data_t regs_data;
     memory_data_t mem_data;
     bpt_data_t bpt_data;
-    debugger_event_t dbg_evt;
+    int dbg_events_count;
+    debugger_event_t dbg_events[MAX_DBG_EVENTS];
     bpt_list_t bpt_list;
-    int dbg_boot_found;
-    int dbg_active, dbg_trace, dbg_dont_check_bp;
-    int dbg_paused;
-    //HANDLE dbg_no_paused, dbg_has_event, dbg_has_no_req;
-    int dbg_step_over;
-    unsigned int dbg_step_over_addr;
-
-    // functions
-    void (*start_debugging)();
-    void (*handle_request)();
-    void (*stop_debugging)();
+    int dbg_active;
 } dbg_request_t;
 #pragma pack(pop)
 
-extern dbg_request_t *dbg_req;
-
-void wrap_debugger();
-int activate_shared_mem();
-void deactivate_shared_mem();
-void unwrap_debugger();
-int recv_dbg_event(int wait);
-void send_dbg_request(request_type_t type);
+dbg_request_t *open_shared_mem();
+void close_shared_mem(dbg_request_t **request);
+int recv_dbg_event(dbg_request_t *request, int wait);
+void send_dbg_request(dbg_request_t *request, request_type_t type);
 
 #ifdef __cplusplus
 }

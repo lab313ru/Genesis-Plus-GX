@@ -25,7 +25,6 @@ namespace cap
 #include "capstone/capstone.h"
 }
 
-#define MAXROMSIZE ((unsigned int)0xA00000)
 #define DBG_EVENTS_TIMER 1
 #define BYTES_BEFORE_PC 0x30
 #define LINES_BEFORE_PC 15
@@ -38,6 +37,7 @@ namespace cap
 #define BPT_COLOR (RGB(0xFF, 0, 0))
 #define BPT_COLOR_PC (RGB(0xA0, 0xA0, 0xFF))
 
+static dbg_request_t *dbg_req = NULL;
 static HANDLE hThread = NULL;
 
 static HWND disHwnd = NULL, listHwnd = NULL;
@@ -387,13 +387,13 @@ static void set_m68k_reg(int reg_index, unsigned int value)
     dbg_req->regs_data.type = REG_TYPE_M68K;
     dbg_req->regs_data.any_reg.index = reg_index;
     dbg_req->regs_data.any_reg.val = value;
-    send_dbg_request(REQ_SET_REG);
+    send_dbg_request(dbg_req, REQ_SET_REG);
 }
 
 static void update_regs()
 {
     dbg_req->regs_data.type = REG_TYPE_M68K;
-    send_dbg_request(REQ_GET_REGS);
+    send_dbg_request(dbg_req, REQ_GET_REGS);
 
     regs_68k_data_t *reg_vals = &dbg_req->regs_data.regs_68k.values;
 
@@ -688,7 +688,7 @@ static void update_disasm_listing(unsigned int pc)
     pc = max(pc - BYTES_BEFORE_PC, (pc < MAXROMSIZE) ? ROM_CODE_START_ADDR : RAM_START_ADDR);
     dbg_req->mem_data.address = pc;
     dbg_req->mem_data.size = DISASM_LISTING_BYTES;
-    send_dbg_request((pc < MAXROMSIZE) ? REQ_READ_68K_ROM : REQ_READ_68K_RAM);
+    send_dbg_request(dbg_req, (pc < MAXROMSIZE) ? REQ_READ_68K_ROM : REQ_READ_68K_RAM);
 
     get_disasm_listing_pc(
         real_pc,
@@ -699,7 +699,7 @@ static void update_disasm_listing(unsigned int pc)
 
 static void update_bpt_list()
 {
-    send_dbg_request(REQ_LIST_BREAKS);
+    send_dbg_request(dbg_req, REQ_LIST_BREAKS);
 
     ListView_SetItemCount(GetDlgItem(disHwnd, IDC_BPT_LIST), dbg_req->bpt_list.count);
 }
@@ -737,10 +737,11 @@ static void check_debugger_events()
     if (!dbg_req->dbg_active)
         return;
 
-    if (!recv_dbg_event(0))
+    int event_index = recv_dbg_event(dbg_req, 0);
+    if (event_index == -1)
         return;
 
-    debugger_event_t *dbg_event = &dbg_req->dbg_evt;
+    debugger_event_t *dbg_event = &dbg_req->dbg_events[event_index];
 
     switch (dbg_event->type)
     {
@@ -751,7 +752,7 @@ static void check_debugger_events()
         break;
     }
 
-    dbg_req->dbg_evt.type = DBG_EVT_NO_EVENT;
+    dbg_event->type = DBG_EVT_NO_EVENT;
 }
 
 LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -1012,20 +1013,20 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             if (!paused)
                 break;
 
-            send_dbg_request(REQ_STEP_INTO);
+            send_dbg_request(dbg_req, REQ_STEP_INTO);
             break;
         case IDC_STEP_OVER:
         case IDC_STEP_OVER_HK:
             if (!paused)
                 break;
 
-            send_dbg_request(REQ_STEP_OVER);
+            send_dbg_request(dbg_req, REQ_STEP_OVER);
             break;
         case IDC_RUN_EMU:
         case IDC_RUN_EMU_HK:
             if (!paused)
                 break;
-            send_dbg_request(REQ_RESUME);
+            send_dbg_request(dbg_req, REQ_RESUME);
             paused = false;
             break;
         case IDC_PAUSE_EMU:
@@ -1033,7 +1034,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             if (paused)
                 break;
 
-            send_dbg_request(REQ_PAUSE);
+            send_dbg_request(dbg_req, REQ_PAUSE);
             paused = true;
             break;
         case IDC_ADD_BREAK_POS_HK:
@@ -1050,7 +1051,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                     bpt_data->address = address;
                     bpt_data->type = BPT_M68K_E;
                     bpt_data->width = 1;
-                    send_dbg_request(REQ_DEL_BREAK);
+                    send_dbg_request(dbg_req, REQ_DEL_BREAK);
                     was_deleted = true;
                     break;
                 }
@@ -1062,7 +1063,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                 bpt_data->address = address;
                 bpt_data->type = BPT_M68K_E;
                 bpt_data->width = 1;
-                send_dbg_request(REQ_ADD_BREAK);
+                send_dbg_request(dbg_req, REQ_ADD_BREAK);
             }
 
             update_dbg_window_info(false, true, true);
@@ -1119,7 +1120,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                     bpt_data->type = (bpt_type_t)((int)bpt_data->type | (int)BPT_Z80_W);
             }
 
-            send_dbg_request(REQ_ADD_BREAK);
+            send_dbg_request(dbg_req, REQ_ADD_BREAK);
 
             update_dbg_window_info(false, true, (bpt_data->type == BPT_M68K_E) ? true : false);
         } break;
@@ -1134,12 +1135,12 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
                 bpt_data->address = bpt_item->address;
                 bpt_data->type = bpt_item->type;
-                send_dbg_request(REQ_DEL_BREAK);
+                send_dbg_request(dbg_req, REQ_DEL_BREAK);
                 update_dbg_window_info(false, true, (bpt_item->type == BPT_M68K_E) ? true : false);
             }
         } break;
         case IDC_CLEAR_BREAKS:
-            send_dbg_request(REQ_CLEAR_BREAKS);
+            send_dbg_request(dbg_req, REQ_CLEAR_BREAKS);
             update_dbg_window_info(false, true, true);
         } break;
 
@@ -1149,8 +1150,10 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     {
         KillTimer(hWnd, DBG_EVENTS_TIMER);
 
-        dbg_req->stop_debugging();
-        unwrap_debugger();
+        send_dbg_request(dbg_req, REQ_STOP);
+
+        TerminateThread(hThread, 0);
+        CloseHandle(hThread);
 
         PostQuitMessage(0);
         EndDialog(hWnd, 0);
@@ -1162,18 +1165,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
 static bool openCapstone()
 {
-    bool error = (cap::cs_open(cap::CS_ARCH_M68K, cap::CS_MODE_M68K_000, &cs_handle) == cap::CS_ERR_OK);
-
-    cap::cs_opt_skipdata skipdata;
-    skipdata.callback = NULL;
-    skipdata.mnemonic = "dc.b";
-    skipdata.user_data = NULL;
-
-    //cap::cs_option(cs_handle, cap::CS_OPT_SKIPDATA_SETUP, (size_t)&skipdata);
-
-    //cap::cs_option(cs_handle, cap::CS_OPT_SKIPDATA, cap::CS_OPT_ON);
-
-    return error;
+    return (cap::cs_open(cap::CS_ARCH_M68K, cap::CS_MODE_M68K_000, &cs_handle) == cap::CS_ERR_OK);
 }
 
 static void closeCapstone()
@@ -1215,21 +1207,12 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
 void create_disassembler()
 {
-    activate_shared_mem();
-    wrap_debugger();
-    dbg_req->start_debugging();
+    dbg_req = open_shared_mem();
     hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
 }
 
 void destroy_disassembler()
 {
+    close_shared_mem(&dbg_req);
     DestroyWindow(disHwnd);
-    TerminateThread(hThread, 0);
-    CloseHandle(hThread);
-    deactivate_shared_mem();
-}
-
-void update_disassembler()
-{
-    dbg_req->handle_request();
 }

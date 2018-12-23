@@ -55,7 +55,7 @@
  * instruction.
  */
 #define M68K_INSTRUCTION_HOOK       OPT_SPECIFY_HANDLER
-#define M68K_INSTRUCTION_CALLBACK() m68k_instr_callback()
+#define M68K_INSTRUCTION_CALLBACK() process_breakpoints()
 
 /* If ON, the CPU will monitor the trace flags and take trace exceptions
  */

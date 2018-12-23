@@ -48,6 +48,8 @@
 
 #include "gui.h"
 
+#include "debug.h"
+
 #ifdef _MSC_VER
 #define snprintf _snprintf
 #endif
@@ -2456,12 +2458,16 @@ void retro_init(void)
 
    environ_cb(RETRO_ENVIRONMENT_SET_SERIALIZATION_QUIRKS, &serialization_quirks);
 
+   activate_shared_mem();
+   start_debugging();
    run_gui();
 }
 
 void retro_deinit(void)
 {
     stop_gui();
+    stop_debugging();
+    deactivate_shared_mem();
 }
 
 void retro_reset(void)

@@ -103,6 +103,9 @@
     <Filter Include="gui\edit_fields">
       <UniqueIdentifier>{6ce1585d-5253-448c-aee1-1ecde860dca4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="gui\resource">
+      <UniqueIdentifier>{2bafbc0a-3064-4bde-a6f3-61fbf4cecea9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\core\cd_hw\libchdr\src\bitstream.c">
@@ -800,9 +803,6 @@
     <ClInclude Include="..\..\gui\gui.h">
       <Filter>gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\gui\resource.h">
-      <Filter>gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\gui\plane_explorer.h">
       <Filter>gui\plane_explorer</Filter>
     </ClInclude>
@@ -821,20 +821,23 @@
     <ClInclude Include="..\..\core\debug\debug_wrap.h">
       <Filter>core\debug</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="..\..\gui\gui.rc">
-      <Filter>gui</Filter>
-    </ResourceCompile>
+    <ClInclude Include="..\..\gui\resource.h">
+      <Filter>gui\resource</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="..\..\gui\gui.manifest">
-      <Filter>gui</Filter>
+      <Filter>gui\resource</Filter>
     </Manifest>
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="..\..\gui\gui.rc">
+      <Filter>gui\resource</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
     <Image Include="..\..\gui\gens2.ico">
-      <Filter>gui</Filter>
+      <Filter>gui\resource</Filter>
     </Image>
   </ItemGroup>
 </Project>
