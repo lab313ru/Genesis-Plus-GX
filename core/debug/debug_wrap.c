@@ -48,7 +48,7 @@ int recv_dbg_event(dbg_request_t *request, int wait)
 
         if (!wait)
             return -1;
-        Sleep(1);
+        Sleep(10);
     }
 }
 
@@ -58,6 +58,6 @@ void send_dbg_request(dbg_request_t *request, request_type_t type)
 
     while (request->dbg_active && request->req_type != REQ_NO_REQUEST)
     {
-        Sleep(1);
+        Sleep(10);
     }
 }
