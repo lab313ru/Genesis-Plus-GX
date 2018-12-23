@@ -7,20 +7,32 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "genesis_plus_gx_libretro", 
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
+		GUI_Debug|x64 = GUI_Debug|x64
+		GUI_Debug|x86 = GUI_Debug|x86
+		GUI_Release|x64 = GUI_Release|x64
+		GUI_Release|x86 = GUI_Release|x86
+		IDA_Debug|x64 = IDA_Debug|x64
+		IDA_Debug|x86 = IDA_Debug|x86
+		IDA_Release|x64 = IDA_Release|x64
+		IDA_Release|x86 = IDA_Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.Debug|x64.ActiveCfg = Debug|x64
-		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.Debug|x64.Build.0 = Debug|x64
-		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.Debug|x86.ActiveCfg = Debug|Win32
-		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.Debug|x86.Build.0 = Debug|Win32
-		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.Release|x64.ActiveCfg = Release|x64
-		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.Release|x64.Build.0 = Release|x64
-		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.Release|x86.ActiveCfg = Release|Win32
-		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.Release|x86.Build.0 = Release|Win32
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.GUI_Debug|x64.ActiveCfg = GUI_Debug|x64
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.GUI_Debug|x64.Build.0 = GUI_Debug|x64
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.GUI_Debug|x86.ActiveCfg = GUI_Debug|Win32
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.GUI_Debug|x86.Build.0 = GUI_Debug|Win32
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.GUI_Release|x64.ActiveCfg = GUI_Release|x64
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.GUI_Release|x64.Build.0 = GUI_Release|x64
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.GUI_Release|x86.ActiveCfg = GUI_Release|Win32
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.GUI_Release|x86.Build.0 = GUI_Release|Win32
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.IDA_Debug|x64.ActiveCfg = IDA_Debug|x64
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.IDA_Debug|x64.Build.0 = IDA_Debug|x64
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.IDA_Debug|x86.ActiveCfg = IDA_Debug|Win32
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.IDA_Debug|x86.Build.0 = IDA_Debug|Win32
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.IDA_Release|x64.ActiveCfg = IDA_Release|x64
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.IDA_Release|x64.Build.0 = IDA_Release|x64
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.IDA_Release|x86.ActiveCfg = IDA_Release|Win32
+		{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}.IDA_Release|x86.Build.0 = IDA_Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

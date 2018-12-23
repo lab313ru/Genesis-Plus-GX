@@ -157,16 +157,18 @@ void run_gui()
     create_vdp_ram_debug();
     create_hex_editor();
 
-    dbg_active = 1;
 
+    dbg_active = 1;
     _beginthread(update_windows, 1024, NULL);
-    //create_disassembler();
+
+#ifdef HAS_DBG_GUI
+    create_disassembler();
+#endif
 }
 
 void update_gui()
 {
     handle_request();
-    //update_disassembler();
 }
 
 void stop_gui()
@@ -176,7 +178,9 @@ void stop_gui()
     destroy_hex_editor();
 
     dbg_active = 0;
-    //destroy_disassembler();
+#ifdef HAS_DBG_GUI
+    destroy_disassembler();
+#endif
 
     disable_visual_styles();
 }

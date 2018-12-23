@@ -746,7 +746,10 @@ static void check_debugger_events()
     switch (dbg_event->type)
     {
     case DBG_EVT_STARTED: do_game_started(dbg_event->pc); break;
-    case DBG_EVT_PAUSED: do_game_paused(dbg_event->pc); break;
+    case DBG_EVT_PAUSED:
+    case DBG_EVT_STEP:
+    case DBG_EVT_BREAK:
+        do_game_paused(dbg_event->pc); break;
     case DBG_EVT_STOPPED: do_game_stopped(); break;
     default:
         break;
