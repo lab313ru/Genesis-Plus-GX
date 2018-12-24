@@ -571,7 +571,7 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
     case WM_CREATE: {
         HexEditorMenu = GetMenu(hDlg);
         HexRegionsMenu = CreatePopupMenu();
-        InsertMenu(HexEditorMenu, GetMenuItemCount(HexEditorMenu) + 1, MF_BYPOSITION | MF_POPUP | MF_STRING,
+        InsertMenu(HexEditorMenu, GetMenuItemCount(HexEditorMenu), MF_BYPOSITION | MF_POPUP | MF_STRING,
             (UINT_PTR)HexRegionsMenu, "&Region");
         for (int i = 0; i < REGION_COUNT, HexRegions[i].Active; i++)
             InsertMenu(HexRegionsMenu, i,

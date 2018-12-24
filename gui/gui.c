@@ -157,7 +157,6 @@ void run_gui()
     create_vdp_ram_debug();
     create_hex_editor();
 
-
     dbg_active = 1;
     _beginthread(update_windows, 1024, NULL);
 
