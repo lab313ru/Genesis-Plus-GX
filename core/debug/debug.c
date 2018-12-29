@@ -444,7 +444,7 @@ static void process_request()
             {
             case REQ_READ_68K_ROM: mem_data->m68k_rom[mem_data->address + i] = m68ki_read_8(mem_data->address + i); break;
             case REQ_READ_68K_RAM: mem_data->m68k_ram[(mem_data->address & 0xFFFF) + i] = m68ki_read_8(mem_data->address + i); break;
-            case REQ_READ_Z80: mem_data->z80_ram[mem_data->address + i] = z80_readmem(mem_data->address + i); break;
+            case REQ_READ_Z80: mem_data->z80_ram[(mem_data->address & 0x1FFF) + i] = z80_readmem(mem_data->address + i); break;
             default:
                 break;
             }
@@ -465,7 +465,7 @@ static void process_request()
             {
             case REQ_WRITE_68K_ROM: m68ki_write_8(mem_data->address + i, mem_data->m68k_rom[mem_data->address + i]); break;
             case REQ_WRITE_68K_RAM: m68ki_write_8(0xFF0000 + (mem_data->address & 0xFFFF) + i, mem_data->m68k_ram[(mem_data->address & 0xFFFF) + i]); break;
-            case REQ_WRITE_Z80: z80_writemem(mem_data->address + i, mem_data->z80_ram[mem_data->address + i]); break;
+            case REQ_WRITE_Z80: z80_writemem(mem_data->address + i, mem_data->z80_ram[(mem_data->address & 0x1FFF) + i]); break;
             default:
                 break;
             }
