@@ -69,6 +69,7 @@ typedef enum {
     REQ_CLEAR_BREAKS,
     REQ_LIST_BREAKS,
 
+    REQ_ATTACH,
     REQ_PAUSE,
     REQ_RESUME,
     REQ_STOP,

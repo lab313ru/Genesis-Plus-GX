@@ -26,6 +26,7 @@ namespace cap
 }
 
 #define DBG_EVENTS_TIMER 1
+#define DBG_WHEN_IDA_UPDATE 2
 #define BYTES_BEFORE_PC 0x30
 #define LINES_BEFORE_PC 15
 #define LINES_MAX 25
@@ -849,12 +850,21 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         SendMessage(GetDlgItem(hWnd, IDC_SR_I_SPIN), UDM_SETRANGE, 0, MAKELPARAM(100,0));
 
         SetTimer(hWnd, DBG_EVENTS_TIMER, 10, NULL);
+        SetTimer(hWnd, DBG_WHEN_IDA_UPDATE, 1000, NULL);
     } break;
     case WM_TIMER:
     {
         switch (LOWORD(wParam))
         {
-        case DBG_EVENTS_TIMER: disable_when_ida(); if (!dbg_req->is_ida) check_debugger_events(); break;
+        case DBG_EVENTS_TIMER:
+            disable_when_ida();
+            if (!dbg_req->is_ida)
+                check_debugger_events();
+            break;
+        case DBG_WHEN_IDA_UPDATE:
+            if (dbg_req->is_ida)
+                update_dbg_window_info(true, true, true);
+            break;
         }
         return FALSE;
     } break;
@@ -1203,6 +1213,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     case WM_CLOSE:
     {
         KillTimer(disHwnd, DBG_EVENTS_TIMER);
+        KillTimer(disHwnd, DBG_WHEN_IDA_UPDATE);
         send_dbg_request(dbg_req, REQ_STOP);
         disHwnd = NULL;
 

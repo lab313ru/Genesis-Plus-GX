@@ -498,6 +498,9 @@ void process_request()
         for (int i = 0; i < bpt_list->count; ++i)
             get_bpt_data(i, &bpt_list->breaks[i]);
     } break;
+    case REQ_ATTACH:
+        dbg_first_paused = 0;
+        break;
     case REQ_PAUSE:
         pause_debugger();
         break;
@@ -585,7 +588,7 @@ void process_breakpoints() {
         return;
     }
 
-    if (dbg_paused)
+    if (dbg_paused && dbg_first_paused)
         longjmp(jmp_env, 1);
 
     unsigned int pc = m68k_get_reg(M68K_REG_PC);
@@ -634,7 +637,7 @@ void process_breakpoints() {
         send_dbg_event(DBG_EVT_PAUSED);
     }
 
-    if (dbg_paused && !is_step_in && !is_step_over)
+    if (dbg_paused && (!is_step_in || is_step_over))
     {
         longjmp(jmp_env, 1);
     }
