@@ -165,7 +165,7 @@ void run_gui()
 
 void update_gui()
 {
-    handle_request();
+    process_request();
 }
 
 void stop_gui()

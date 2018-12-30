@@ -24,10 +24,9 @@ typedef enum {
 typedef struct {
     HWND Hwnd;
     HDC  DC;
-    UINT InstanceLimit;
     char InputDigit;
     int
-        MultiInstance, MouseButtonHeld, SecondDigitPrompted, Running,
+        MouseButtonHeld, SecondDigitPrompted, Running,
         TextView, DrawLines, FontBold;
     int
         FontHeight, FontWidth, FontWeight,

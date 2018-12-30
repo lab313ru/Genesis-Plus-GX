@@ -49,6 +49,7 @@
 #include "gui.h"
 
 #include "debug.h"
+jmp_buf jmp_env;
 
 #ifdef _MSC_VER
 #define snprintf _snprintf
@@ -2497,6 +2498,19 @@ void retro_reset(void)
 
 void retro_run(void) 
 {
+   if (is_debugger_paused())
+   {
+       longjmp(jmp_env, 1);
+   }
+
+   int is_paused = setjmp(jmp_env);
+
+   if (is_paused)
+   {
+       process_request();
+       return;
+   }
+
    bool updated = false;
    is_running = true;
 

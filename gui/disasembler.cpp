@@ -1200,10 +1200,11 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
         return TRUE;
     } break;
-    case WM_DESTROY:
+    case WM_CLOSE:
     {
         KillTimer(disHwnd, DBG_EVENTS_TIMER);
         send_dbg_request(dbg_req, REQ_STOP);
+        disHwnd = NULL;
 
         PostQuitMessage(0);
         EndDialog(hWnd, 0);
@@ -1264,7 +1265,6 @@ void destroy_disassembler()
 {
     SendMessage(disHwnd, WM_CLOSE, 0, 0);
 
-    TerminateThread(hThread, 0);
     CloseHandle(hThread);
 
     close_shared_mem(&dbg_req);

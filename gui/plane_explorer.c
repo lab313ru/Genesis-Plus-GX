@@ -604,7 +604,8 @@ BOOL CALLBACK PlaneExplorerDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LP
     }
     case WM_CLOSE:
         PlaneExplorerHWnd = NULL;
-        EndDialog(hwnd, 1);
+        PostQuitMessage(0);
+        EndDialog(hwnd, 0);
         break;
 
     case WM_MOUSELEAVE:
@@ -664,8 +665,6 @@ BOOL CALLBACK PlaneExplorerDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LP
     case UpdateMSG:
     {
         RedrawWindow(PlaneExplorerHWnd, NULL, NULL, RDW_INVALIDATE);
-        //InvalidateRect(PlaneExplorerHWnd, NULL, FALSE);
-        //UpdateWindow(PlaneExplorerHWnd);
     } break;
 
     default:
@@ -681,7 +680,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
     PlaneExplorerHWnd = CreateDialog(dbg_wnd_hinst, MAKEINTRESOURCE(IDD_PLANEEXPLORER), dbg_window, (DLGPROC)PlaneExplorerDialogProc);
 
-    while (GetMessage(&messages, PlaneExplorerHWnd, 0, 0))
+    while (GetMessage(&messages, NULL, 0, 0))
     {
         TranslateMessage(&messages);
         DispatchMessage(&messages);
@@ -697,8 +696,8 @@ void create_plane_explorer()
 
 void destroy_plane_explorer()
 {
-    DestroyWindow(PlaneExplorerHWnd);
-    TerminateThread(hThread, 0);
+    SendMessage(PlaneExplorerHWnd, WM_CLOSE, 0, 0);
+
     CloseHandle(hThread);
 }
 

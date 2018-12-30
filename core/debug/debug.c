@@ -16,6 +16,8 @@
 #include "vdp_ctrl.h"
 #include "Z80.h"
 
+jmp_buf jmp_env2;
+
 static int dbg_first_paused, dbg_trace, dbg_dont_check_bp;
 static int dbg_paused;
 static int dbg_step_over;
@@ -275,8 +277,11 @@ static unsigned int calc_step_over() {
     return dest_pc;
 }
 
-static void process_request()
+void process_request()
 {
+    if (!dbg_req || !dbg_req->dbg_active)
+        return;
+
     if (dbg_req->req_type == REQ_NO_REQUEST)
         return;
 
@@ -550,15 +555,7 @@ void stop_debugging()
     detach_debugger();
     deactivate_debugger();
 
-    dbg_first_paused = 0;
-}
-
-void handle_request()
-{
-    if (!dbg_req || !dbg_req->dbg_active)
-        return;
-
-    process_request();
+    dbg_first_paused = dbg_paused = dbg_trace = dbg_dont_check_bp = dbg_step_over = dbg_step_over_addr = 0;
 }
 
 void start_debugging()
@@ -570,7 +567,7 @@ void start_debugging()
 
     init_bpt_list();
 
-    dbg_first_paused = 0;
+    dbg_first_paused = dbg_paused = dbg_trace = dbg_dont_check_bp = dbg_step_over = dbg_step_over_addr = 0;
 }
 
 int is_debugger_accessible()
@@ -580,9 +577,16 @@ int is_debugger_accessible()
 
 void process_breakpoints() {
     int handled_event = 0;
+    int is_step_over = 0;
+    int is_step_in = 0;
 
     if (!dbg_req || !dbg_req->dbg_active)
+    {
         return;
+    }
+
+    if (dbg_paused)
+        longjmp(jmp_env, 1);
 
     unsigned int pc = m68k_get_reg(M68K_REG_PC);
 
@@ -596,6 +600,7 @@ void process_breakpoints() {
     }
 
     if (dbg_trace) {
+        is_step_in = 1;
         dbg_trace = 0;
         dbg_paused = 1;
 
@@ -605,15 +610,13 @@ void process_breakpoints() {
         handled_event = 1;
     }
 
-    int is_step_over = 0;
-
     if (!dbg_paused) {
         if (dbg_step_over && pc == dbg_step_over_addr) {
+            is_step_over = 1;
             dbg_step_over = 0;
             dbg_step_over_addr = 0;
 
             dbg_paused = 1;
-            is_step_over = 1;
         }
 
         check_breakpoint(BPT_M68K_E, 1, pc, pc);
@@ -631,9 +634,13 @@ void process_breakpoints() {
         send_dbg_event(DBG_EVT_PAUSED);
     }
 
-    while (dbg_paused)
+    if (dbg_paused && !is_step_in && !is_step_over)
     {
-        process_request();
-        Sleep(10);
+        longjmp(jmp_env, 1);
     }
+}
+
+int is_debugger_paused()
+{
+    return is_debugger_accessible() && dbg_paused && dbg_first_paused;
 }
