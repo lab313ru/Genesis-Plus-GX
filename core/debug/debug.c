@@ -573,6 +573,11 @@ void start_debugging()
     dbg_first_paused = 0;
 }
 
+int is_debugger_accessible()
+{
+    return (dbg_req != NULL);
+}
+
 void process_breakpoints() {
     int handled_event = 0;
 

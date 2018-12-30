@@ -9,6 +9,7 @@ extern "C" {
 
 extern void start_debugging();
 extern void stop_debugging();
+extern int is_debugger_accessible();
 //void stop_debugging();
 //int is_debugger_active();
 //void send_dbg_request();

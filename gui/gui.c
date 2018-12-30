@@ -160,9 +160,7 @@ void run_gui()
     dbg_active = 1;
     _beginthread(update_windows, 1024, NULL);
 
-#ifdef HAS_DBG_GUI
     create_disassembler();
-#endif
 }
 
 void update_gui()
@@ -177,9 +175,7 @@ void stop_gui()
     destroy_hex_editor();
 
     dbg_active = 0;
-#ifdef HAS_DBG_GUI
     destroy_disassembler();
-#endif
 
     disable_visual_styles();
 }

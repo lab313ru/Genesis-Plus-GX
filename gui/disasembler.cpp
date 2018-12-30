@@ -40,6 +40,7 @@ namespace cap
 static dbg_request_t *dbg_req = NULL;
 static HANDLE hThread = NULL;
 
+static HMODULE hRich = NULL;
 static HWND disHwnd = NULL, listHwnd = NULL;
 static std::string cliptext;
 static cap::csh cs_handle;
@@ -142,6 +143,56 @@ static void highligh_blocks()
     
     SendMessage(listHwnd, EM_HIDESELECTION, 0, 0);
     LockWindowUpdate(NULL);
+}
+
+static void disable_when_ida()
+{
+    if (dbg_req == NULL)
+        return;
+
+    EnableWindow(listHwnd, dbg_req->is_ida ? FALSE : TRUE);
+
+    for (int i = 0; i <= (IDC_REG_D7 - IDC_REG_D0); ++i)
+    {
+        HWND hDL = GetDlgItem(disHwnd, IDC_REG_D0_L + i);
+        HWND hDE = GetDlgItem(disHwnd, IDC_REG_D0 + i);
+        HWND hAL = GetDlgItem(disHwnd, IDC_REG_A0_L + i);
+        HWND hAE = GetDlgItem(disHwnd, IDC_REG_A0 + i);
+        EnableWindow(hDL, dbg_req->is_ida ? FALSE : TRUE);
+        EnableWindow(hDE, dbg_req->is_ida ? FALSE : TRUE);
+        EnableWindow(hAL, dbg_req->is_ida ? FALSE : TRUE);
+        EnableWindow(hAE, dbg_req->is_ida ? FALSE : TRUE);
+    }
+
+    EnableWindow(GetDlgItem(disHwnd, IDC_REG_PC_L), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_REG_PC), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_REG_SP_L), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_REG_SP), dbg_req->is_ida ? FALSE : TRUE);
+
+    EnableWindow(GetDlgItem(disHwnd, IDC_REG_PPC_L), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_REG_PPC), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_REG_SR_L), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_REG_SR), dbg_req->is_ida ? FALSE : TRUE);
+
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_T), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_0E), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_S), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_M), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_0B), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_I_VAL), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_07), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_06), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_05), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_X), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_N), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_Z), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_V), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_SR_C), dbg_req->is_ida ? FALSE : TRUE);
+
+    EnableWindow(GetDlgItem(disHwnd, IDC_STEP_INTO), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_STEP_OVER), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_RUN_EMU), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_PAUSE_EMU), dbg_req->is_ida ? FALSE : TRUE);
 }
 
 static void resize_func()
@@ -803,7 +854,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     {
         switch (LOWORD(wParam))
         {
-        case DBG_EVENTS_TIMER: check_debugger_events(); break;
+        case DBG_EVENTS_TIMER: disable_when_ida(); if (!dbg_req->is_ida) check_debugger_events(); break;
         }
         return FALSE;
     } break;
@@ -1151,12 +1202,8 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     } break;
     case WM_DESTROY:
     {
-        KillTimer(hWnd, DBG_EVENTS_TIMER);
-
+        KillTimer(disHwnd, DBG_EVENTS_TIMER);
         send_dbg_request(dbg_req, REQ_STOP);
-
-        TerminateThread(hThread, 0);
-        CloseHandle(hThread);
 
         PostQuitMessage(0);
         EndDialog(hWnd, 0);
@@ -1181,8 +1228,8 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
     openCapstone();
 
     HACCEL hAccelTable = LoadAccelerators(dbg_wnd_hinst, MAKEINTRESOURCE(ACCELERATOR_RESOURCE_ID));
-    MSG messages;
-    HMODULE hRich = LoadLibrary("Riched32.dll");
+    MSG msg;
+    hRich = LoadLibrary("Riched32.dll");
 
     disHwnd = CreateDialog(dbg_wnd_hinst, MAKEINTRESOURCE(IDD_DISASSEMBLER), dbg_window, (DLGPROC)DisasseblerWndProc);
     ShowWindow(disHwnd, SW_SHOW);
@@ -1192,17 +1239,16 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
     resize_func();
 
-    while (GetMessage(&messages, NULL, 0, 0))
+    while (GetMessage(&msg, NULL, 0, 0))
     {
-        if (!TranslateAccelerator(disHwnd, hAccelTable, &messages))
+        if (!TranslateAccelerator(disHwnd, hAccelTable, &msg))
         {
-            TranslateMessage(&messages);
-            DispatchMessage(&messages);
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
         }
     }
 
     FreeLibrary(hRich);
-
     closeCapstone();
 
     return 1;
@@ -1216,6 +1262,10 @@ void create_disassembler()
 
 void destroy_disassembler()
 {
+    SendMessage(disHwnd, WM_CLOSE, 0, 0);
+
+    TerminateThread(hThread, 0);
+    CloseHandle(hThread);
+
     close_shared_mem(&dbg_req);
-    DestroyWindow(disHwnd);
 }
