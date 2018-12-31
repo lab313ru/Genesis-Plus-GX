@@ -499,6 +499,7 @@ void process_request()
             get_bpt_data(i, &bpt_list->breaks[i]);
     } break;
     case REQ_ATTACH:
+        activate_debugger();
         dbg_first_paused = 0;
         break;
     case REQ_PAUSE:

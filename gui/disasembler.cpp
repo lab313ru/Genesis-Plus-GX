@@ -851,6 +851,9 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
         SetTimer(hWnd, DBG_EVENTS_TIMER, 10, NULL);
         SetTimer(hWnd, DBG_WHEN_IDA_UPDATE, 1000, NULL);
+
+        dbg_req->is_ida = 0;
+        send_dbg_request(dbg_req, REQ_ATTACH);
     } break;
     case WM_TIMER:
     {
@@ -1074,30 +1077,23 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         } break;
         case IDC_STEP_INTO:
         case IDC_STEP_INTO_HK:
-            if (!paused)
-                break;
-
+            dbg_req->dbg_active = 1;
             send_dbg_request(dbg_req, REQ_STEP_INTO);
             break;
         case IDC_STEP_OVER:
         case IDC_STEP_OVER_HK:
-            if (!paused)
-                break;
-
+            dbg_req->dbg_active = 1;
             send_dbg_request(dbg_req, REQ_STEP_OVER);
             break;
         case IDC_RUN_EMU:
         case IDC_RUN_EMU_HK:
-            if (!paused)
-                break;
+            dbg_req->dbg_active = 1;
             send_dbg_request(dbg_req, REQ_RESUME);
             paused = false;
             break;
         case IDC_PAUSE_EMU:
         case IDC_PAUSE_EMU_HK:
-            if (paused)
-                break;
-
+            dbg_req->dbg_active = 1;
             send_dbg_request(dbg_req, REQ_PAUSE);
             paused = true;
             break;
