@@ -1003,8 +1003,8 @@ void HexCreateDialog() {
     wndclass.cbClsExtra = 0;
     wndclass.cbWndExtra = sizeof(HexParams *);
     wndclass.hInstance = dbg_wnd_hinst;
-    //wndclass.hIcon = LoadIcon(dbg_wnd_hinst, MAKEINTRESOURCE(IDI_GENS));
-    //wndclass.hIconSm = LoadIcon(dbg_wnd_hinst, MAKEINTRESOURCE(IDI_GENS));
+    wndclass.hIcon = LoadIcon(dbg_wnd_hinst, MAKEINTRESOURCE(IDI_GENS));
+    wndclass.hIconSm = LoadIcon(dbg_wnd_hinst, MAKEINTRESOURCE(IDI_GENS));
     wndclass.hCursor = LoadCursor(NULL, IDC_ARROW);
     wndclass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
     wndclass.lpszMenuName = "HEXEDITOR_MENU";
