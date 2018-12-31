@@ -446,8 +446,8 @@ void process_request()
             switch (dbg_req->req_type)
             {
             case REQ_READ_68K_ROM: mem_data->m68k_rom[mem_data->address + i] = m68ki_read_8(mem_data->address + i); break;
-            case REQ_READ_68K_RAM: mem_data->m68k_ram[(mem_data->address & 0xFFFF) + i] = m68ki_read_8(mem_data->address + i); break;
-            case REQ_READ_Z80: mem_data->z80_ram[(mem_data->address & 0x1FFF) + i] = z80_readmem(mem_data->address + i); break;
+            case REQ_READ_68K_RAM: mem_data->m68k_ram[(mem_data->address + i) & 0xFFFF] = m68ki_read_8(mem_data->address + i); break;
+            case REQ_READ_Z80: mem_data->z80_ram[(mem_data->address + i) & 0x1FFF] = z80_readmem(mem_data->address + i); break;
             default:
                 break;
             }
@@ -467,8 +467,8 @@ void process_request()
             switch (dbg_req->req_type)
             {
             case REQ_WRITE_68K_ROM: m68ki_write_8(mem_data->address + i, mem_data->m68k_rom[mem_data->address + i]); break;
-            case REQ_WRITE_68K_RAM: m68ki_write_8(0xFF0000 + (mem_data->address & 0xFFFF) + i, mem_data->m68k_ram[(mem_data->address & 0xFFFF) + i]); break;
-            case REQ_WRITE_Z80: z80_writemem(mem_data->address + i, mem_data->z80_ram[(mem_data->address & 0x1FFF) + i]); break;
+            case REQ_WRITE_68K_RAM: m68ki_write_8(0xFF0000 | ((mem_data->address + i) & 0xFFFF), mem_data->m68k_ram[(mem_data->address + i) & 0xFFFF]); break;
+            case REQ_WRITE_Z80: z80_writemem(mem_data->address + i, mem_data->z80_ram[(mem_data->address + i) & 0x1FFF]); break;
             default:
                 break;
             }
@@ -587,7 +587,7 @@ void process_breakpoints() {
         return;
     }
 
-    if (dbg_paused && dbg_first_paused)
+    if (dbg_paused && dbg_first_paused && !dbg_trace)
         longjmp(jmp_env, 1);
 
     unsigned int pc = m68k_get_reg(M68K_REG_PC);
@@ -644,5 +644,5 @@ void process_breakpoints() {
 
 int is_debugger_paused()
 {
-    return is_debugger_accessible() && dbg_paused && dbg_first_paused;
+    return is_debugger_accessible() && dbg_paused && dbg_first_paused && !dbg_trace;
 }

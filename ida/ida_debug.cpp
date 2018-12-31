@@ -296,11 +296,8 @@ static int idaapi process_get_info(int n, process_info_t *info)
 
 static int idaapi check_debugger_events(void *ud)
 {
-    while (true)
+    while (dbg_req->dbg_active || dbg_req->dbg_events_count)
     {
-        if (!dbg_req->dbg_active && dbg_req->dbg_events_count == 0)
-            break;
-
         int event_index = recv_dbg_event(dbg_req, 0);
         if (event_index == -1)
         {

@@ -32,7 +32,7 @@ namespace cap
 #define LINES_MAX 25
 #define DISASM_LISTING_BYTES 0x200
 #define ROM_CODE_START_ADDR ((unsigned int)0x200)
-#define RAM_START_ADDR ((unsigned int)0xFFFF0000)
+#define RAM_START_ADDR ((unsigned int)0xFF0000)
 #define DISASM_LISTING_BKGN (RGB(0xCC, 0xFF, 0xFF))
 #define CURR_PC_COLOR (RGB(0x60, 0xD0, 0xFF))
 #define BPT_COLOR (RGB(0xFF, 0, 0))
@@ -744,7 +744,7 @@ static void update_disasm_listing(unsigned int pc)
 
     get_disasm_listing_pc(
         real_pc,
-        (pc < MAXROMSIZE) ? &dbg_req->mem_data.m68k_rom[pc] : &dbg_req->mem_data.m68k_ram[pc - RAM_START_ADDR],
+        (pc < MAXROMSIZE) ? &dbg_req->mem_data.m68k_rom[pc] : &dbg_req->mem_data.m68k_ram[(pc - RAM_START_ADDR) & 0xFFFF],
         dbg_req->mem_data.size,
         LINES_MAX);
 }
@@ -1132,7 +1132,6 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         {
             bpt_data_t *bpt_data = &dbg_req->bpt_data;
             bpt_data->address = GetDlgItemHex(disHwnd, IDC_BPT_ADDR);
-            bpt_data->address += (bpt_data->address < MAXROMSIZE) ? 0 : 0xFF000000;
             int bpt_type = (int)SendMessage(GetDlgItem(disHwnd, IDC_BPT_SIZE), CB_GETCURSEL, 0, 0);
 
             switch (bpt_type)
