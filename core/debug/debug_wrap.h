@@ -65,6 +65,7 @@ typedef enum {
     REQ_WRITE_Z80,
 
     REQ_ADD_BREAK,
+    REQ_TOGGLE_BREAK,
     REQ_DEL_BREAK,
     REQ_CLEAR_BREAKS,
     REQ_LIST_BREAKS,
@@ -142,6 +143,7 @@ typedef struct {
     bpt_type_t type;
     unsigned int address;
     int width;
+    int enabled;
 } bpt_data_t;
 
 typedef struct {

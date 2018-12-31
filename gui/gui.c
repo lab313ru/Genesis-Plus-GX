@@ -1,3 +1,5 @@
+#include <Windows.h>
+#include <commctrl.h>
 #include <process.h>
 #include "gui.h"
 #include "plane_explorer.h"
@@ -151,6 +153,7 @@ void run_gui()
 {
     dbg_wnd_hinst = GetHInstance();
 
+    InitCommonControls();
     enable_visual_styles();
 
     create_plane_explorer();

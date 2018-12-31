@@ -19,6 +19,7 @@
 static int dbg_first_paused, dbg_trace, dbg_dont_check_bp;
 static int dbg_paused;
 static int dbg_step_over;
+static int dbg_last_pc;
 static unsigned int dbg_step_over_addr;
 
 static dbg_request_t *dbg_req = NULL;
@@ -26,6 +27,7 @@ static HANDLE hMapFile = 0;
 
 typedef struct breakpoint_s {
     struct breakpoint_s *next, *prev;
+    int enabled;
     int width;
     bpt_type_t type;
     unsigned int address;
@@ -39,6 +41,7 @@ static breakpoint_t *add_bpt(bpt_type_t type, unsigned int address, int width) {
     bp->type = type;
     bp->address = address;
     bp->width = width;
+    bp->enabled = 1;
 
     if (first_bp) {
         bp->next = first_bp;
@@ -116,6 +119,7 @@ static void get_bpt_data(int index, bpt_data_t *data)
             data->address = p->address;
             data->width = p->width;
             data->type = p->type;
+            data->enabled = p->enabled;
             break;
         }
         ++i;
@@ -139,7 +143,7 @@ void check_breakpoint(bpt_type_t type, int width, unsigned int address, unsigned
 
     breakpoint_t *bp;
     for (bp = first_bp; bp; bp = next_breakpoint(bp)) {
-        if (!(bp->type & type)) continue;
+        if (!(bp->type & type) || !bp->enabled) continue;
         if ((address <= (bp->address + bp->width)) && ((address + width) >= bp->address)) {
             dbg_paused = 1;
             break;
@@ -482,6 +486,14 @@ void process_request()
         if (!find_breakpoint(bpt_data->address, bpt_data->type))
             add_bpt(bpt_data->type, bpt_data->address, bpt_data->width);
     } break;
+    case REQ_TOGGLE_BREAK:
+    {
+        bpt_data_t *bpt_data = &dbg_req->bpt_data;
+        breakpoint_t *bp = find_breakpoint(bpt_data->address, bpt_data->type);
+
+        if (bp != NULL)
+            bp->enabled = !bp->enabled;
+    } break;
     case REQ_DEL_BREAK:
     {
         bpt_data_t *bpt_data = &dbg_req->bpt_data;
@@ -557,7 +569,7 @@ void stop_debugging()
     detach_debugger();
     deactivate_debugger();
 
-    dbg_first_paused = dbg_paused = dbg_trace = dbg_dont_check_bp = dbg_step_over = dbg_step_over_addr = 0;
+    dbg_first_paused = dbg_paused = dbg_trace = dbg_dont_check_bp = dbg_step_over = dbg_step_over_addr = dbg_last_pc = 0;
 }
 
 void start_debugging()
@@ -569,7 +581,7 @@ void start_debugging()
 
     init_bpt_list();
 
-    dbg_first_paused = dbg_paused = dbg_trace = dbg_dont_check_bp = dbg_step_over = dbg_step_over_addr = 0;
+    dbg_first_paused = dbg_paused = dbg_trace = dbg_dont_check_bp = dbg_step_over = dbg_step_over_addr = dbg_last_pc = 0;
 }
 
 int is_debugger_accessible()
@@ -582,15 +594,13 @@ void process_breakpoints() {
     int is_step_over = 0;
     int is_step_in = 0;
 
+    unsigned int pc = m68k_get_reg(M68K_REG_PC);
+
     if (!dbg_req || !dbg_req->dbg_active)
-    {
         return;
-    }
 
     if (dbg_paused && dbg_first_paused && !dbg_trace)
         longjmp(jmp_env, 1);
-
-    unsigned int pc = m68k_get_reg(M68K_REG_PC);
 
     if (!dbg_first_paused) {
         dbg_first_paused = 1;
@@ -621,7 +631,8 @@ void process_breakpoints() {
             dbg_paused = 1;
         }
 
-        check_breakpoint(BPT_M68K_E, 1, pc, pc);
+        if (dbg_last_pc != pc)
+            check_breakpoint(BPT_M68K_E, 1, pc, pc);
 
         if (dbg_paused) {
             dbg_req->dbg_events[dbg_req->dbg_events_count].pc = pc;
@@ -635,6 +646,8 @@ void process_breakpoints() {
         dbg_req->dbg_events[dbg_req->dbg_events_count].pc = pc;
         send_dbg_event(DBG_EVT_PAUSED);
     }
+
+    dbg_last_pc = pc;
 
     if (dbg_paused && (!is_step_in || is_step_over))
     {
