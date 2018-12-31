@@ -16,8 +16,6 @@
 #include "vdp_ctrl.h"
 #include "Z80.h"
 
-jmp_buf jmp_env2;
-
 static int dbg_first_paused, dbg_trace, dbg_dont_check_bp;
 static int dbg_paused;
 static int dbg_step_over;

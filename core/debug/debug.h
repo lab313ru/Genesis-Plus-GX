@@ -22,7 +22,7 @@ extern int activate_shared_mem();
 extern void deactivate_shared_mem();
 void check_breakpoint(bpt_type_t type, int width, unsigned int address, unsigned int value);
 
-extern jmp_buf jmp_env, jmp_env2;
+extern jmp_buf jmp_env;
 
 #ifdef __cplusplus
 }
