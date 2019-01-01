@@ -676,14 +676,19 @@ BOOL CALLBACK PlaneExplorerDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LP
 
 static DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
-    MSG messages;
+    MSG msg;
 
     PlaneExplorerHWnd = CreateDialog(dbg_wnd_hinst, MAKEINTRESOURCE(IDD_PLANEEXPLORER), dbg_window, (DLGPROC)PlaneExplorerDialogProc);
+    ShowWindow(PlaneExplorerHWnd, SW_SHOW);
+    UpdateWindow(PlaneExplorerHWnd);
 
-    while (GetMessage(&messages, NULL, 0, 0))
+    while (GetMessage(&msg, NULL, 0, 0))
     {
-        TranslateMessage(&messages);
-        DispatchMessage(&messages);
+        if (!IsDialogMessage(PlaneExplorerHWnd, &msg))
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
 	}
 
     return 1;

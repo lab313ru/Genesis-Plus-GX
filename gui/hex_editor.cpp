@@ -1030,20 +1030,20 @@ void HexCreateDialog() {
 
 static DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
-    MSG messages;
+    MSG msg;
 
     HexCreateDialog();
 
-    while (GetMessage(&messages, NULL, 0, 0))
+    while (GetMessage(&msg, NULL, 0, 0))
     {
-        if (HexEditor.Hwnd && IsDialogMessage(HexEditor.Hwnd, &messages))
+        if (HexEditor.Hwnd && IsDialogMessage(HexEditor.Hwnd, &msg))
         {
-            if (messages.message == WM_CHAR)
-                SendMessage(HexEditor.Hwnd, messages.message, messages.wParam, messages.lParam);
+            if (msg.message == WM_CHAR)
+                SendMessage(HexEditor.Hwnd, msg.message, msg.wParam, msg.lParam);
         }
     
-        TranslateMessage(&messages);
-        DispatchMessage(&messages);
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
     }
 
     return 1;

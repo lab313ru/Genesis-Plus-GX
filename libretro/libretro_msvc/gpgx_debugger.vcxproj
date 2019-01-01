@@ -74,21 +74,25 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>d:\RetroArch\cores\</OutDir>
     <TargetName>$(ProjectName)_x86_d</TargetName>
+    <IntDir>$(Configuration)_gpgx\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>d:\RetroArch\cores\</OutDir>
     <TargetName>$(ProjectName)_x64_d</TargetName>
+    <IntDir>$(Platform)\$(Configuration)_gpgx\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>d:\RetroArch\cores\</OutDir>
     <TargetName>$(ProjectName)_x86</TargetName>
+    <IntDir>$(Configuration)_gpgx\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>d:\RetroArch\cores\</OutDir>
     <TargetName>$(ProjectName)_x64</TargetName>
+    <IntDir>$(Platform)\$(Configuration)_gpgx\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

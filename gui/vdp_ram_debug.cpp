@@ -1619,14 +1619,19 @@ LRESULT CALLBACK VDPRamProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 static DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
-    MSG messages;
+    MSG msg;
 
     VDPRamHWnd = CreateDialog(dbg_wnd_hinst, MAKEINTRESOURCE(IDD_VDPRAM), dbg_window, (DLGPROC)VDPRamProc);
+    ShowWindow(VDPRamHWnd, SW_SHOW);
+    UpdateWindow(VDPRamHWnd);
 
-    while (GetMessage(&messages, NULL, 0, 0))
+    while (GetMessage(&msg, NULL, 0, 0))
     {
-        TranslateMessage(&messages);
-        DispatchMessage(&messages);
+        if (!IsDialogMessage(VDPRamHWnd, &msg))
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
 	}
 
     return 1;

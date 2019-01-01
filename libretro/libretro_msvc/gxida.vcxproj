@@ -47,11 +47,13 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(IDA_DIR68)\plugins\</OutDir>
     <TargetExt>.plw</TargetExt>
+    <IntDir>$(Configuration)_gxida\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(IDA_DIR68)\plugins\</OutDir>
     <TargetExt>.plw</TargetExt>
+    <IntDir>$(Configuration)_gxida\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

@@ -812,6 +812,41 @@ static void check_debugger_events()
     dbg_event->type = DBG_EVT_NO_EVENT;
 }
 
+static void delete_breakpoint_from_list(int index)
+{
+    if (index != -1)
+    {
+        bpt_data_t *bpt_item = &dbg_req->bpt_list.breaks[index];
+
+        bpt_data_t *bpt_data = &dbg_req->bpt_data;
+        bpt_data->address = bpt_item->address;
+        bpt_data->type = bpt_item->type;
+        send_dbg_request(dbg_req, REQ_DEL_BREAK);
+        update_dbg_window_info(false, true, (bpt_item->type == BPT_M68K_E) ? true : false);
+    }
+}
+
+LRESULT CALLBACK BptListHandler(HWND hWnd, UINT uMsg, WPARAM wParam,
+    LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+    switch (uMsg)
+    {
+    case WM_KEYDOWN:
+        if (GetKeyState(VK_CONTROL) & 0x8000) return FALSE;
+
+        switch (wParam)
+        {
+        case VK_DELETE:
+        {
+            int index = ListView_GetNextItem(GetDlgItem(disHwnd, IDC_BPT_LIST), -1, LVNI_SELECTED);
+            delete_breakpoint_from_list(index);
+        } break;
+        }
+        return TRUE;
+    }
+    return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+
 LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -837,6 +872,8 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
         HWND bpt_list = GetDlgItem(hWnd, IDC_BPT_LIST);
         ListView_SetExtendedListViewStyle(bpt_list, LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
+
+        SetWindowSubclass(bpt_list, BptListHandler, 0, 0);
 
         LV_COLUMN column;
         memset(&column, 0, sizeof(column));
@@ -915,7 +952,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
             if (item != -1)
             {
-                if ((hitinfo.flags & LVHT_ONITEMSTATEICON) != 0)
+                if ((hitinfo.flags == LVHT_ONITEMSTATEICON))
                 {
                     bpt_data_t *bpt_data = &dbg_req->bpt_list.breaks[nmlist->iItem];
                     ListView_SetCheckState(bpt_list, nmlist->iItem, !bpt_data->enabled);
@@ -1252,18 +1289,8 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         } break;
         case IDC_DEL_BREAK:
         {
-            bpt_data_t *bpt_data = &dbg_req->bpt_data;
             int index = ListView_GetNextItem(GetDlgItem(disHwnd, IDC_BPT_LIST), -1, LVNI_SELECTED);
-
-            if (index != -1)
-            {
-                bpt_data_t *bpt_item = &dbg_req->bpt_list.breaks[index];
-
-                bpt_data->address = bpt_item->address;
-                bpt_data->type = bpt_item->type;
-                send_dbg_request(dbg_req, REQ_DEL_BREAK);
-                update_dbg_window_info(false, true, (bpt_item->type == BPT_M68K_E) ? true : false);
-            }
+            delete_breakpoint_from_list(index);
         } break;
         case IDC_CLEAR_BREAKS:
             send_dbg_request(dbg_req, REQ_CLEAR_BREAKS);
@@ -1315,8 +1342,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
     while (GetMessage(&msg, NULL, 0, 0))
     {
-        if (!TranslateAccelerator(disHwnd, hAccelTable, &msg))
-        {
+        if (!TranslateAccelerator(disHwnd, hAccelTable, &msg) && !IsDialogMessage(disHwnd, &msg)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
