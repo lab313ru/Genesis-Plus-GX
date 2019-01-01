@@ -196,6 +196,10 @@ static void disable_when_ida()
     EnableWindow(GetDlgItem(disHwnd, IDC_STEP_OVER), dbg_req->is_ida ? FALSE : TRUE);
     EnableWindow(GetDlgItem(disHwnd, IDC_RUN_EMU), dbg_req->is_ida ? FALSE : TRUE);
     EnableWindow(GetDlgItem(disHwnd, IDC_PAUSE_EMU), dbg_req->is_ida ? FALSE : TRUE);
+
+    EnableWindow(GetDlgItem(disHwnd, IDC_REG_DMA_LEN), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_REG_DMA_SRC), dbg_req->is_ida ? FALSE : TRUE);
+    EnableWindow(GetDlgItem(disHwnd, IDC_REG_DMA_DST), dbg_req->is_ida ? FALSE : TRUE);
 }
 
 static void update_sr_view(unsigned short sr)
@@ -733,9 +737,8 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         SendMessage(GetDlgItem(hWnd, IDC_SR_I_SPIN), UDM_SETRANGE, 0, MAKELPARAM(100,0));
 
         SetTimer(hWnd, DBG_EVENTS_TIMER, 10, NULL);
-        SetTimer(hWnd, DBG_WHEN_IDA_UPDATE, 1000, NULL);
+        SetTimer(hWnd, DBG_WHEN_IDA_UPDATE, 500, NULL);
 
-        dbg_req->is_ida = 0;
         send_dbg_request(dbg_req, REQ_ATTACH);
     } break;
     case WM_TIMER:
@@ -748,7 +751,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                 check_debugger_events();
             break;
         case DBG_WHEN_IDA_UPDATE:
-            if (dbg_req->is_ida)
+            if (dbg_req && dbg_req->is_ida && (dbg_req->dbg_events_count > 0 || dbg_req->dbg_paused))
                 update_dbg_window_info(true, true, true);
             break;
         }
@@ -995,16 +998,25 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         } break;
         case IDC_STEP_INTO:
         case IDC_STEP_INTO_HK:
+            if (dbg_req->is_ida)
+                break;
+
             dbg_req->dbg_active = 1;
             send_dbg_request(dbg_req, REQ_STEP_INTO);
             break;
         case IDC_STEP_OVER:
         case IDC_STEP_OVER_HK:
+            if (dbg_req->is_ida)
+                break;
+
             dbg_req->dbg_active = 1;
             send_dbg_request(dbg_req, REQ_STEP_OVER);
             break;
         case IDC_RUN_EMU:
         case IDC_RUN_EMU_HK:
+            if (dbg_req->is_ida)
+                break;
+
             dbg_req->dbg_active = 1;
             send_dbg_request(dbg_req, REQ_RESUME);
             paused = false;
@@ -1012,6 +1024,9 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             break;
         case IDC_PAUSE_EMU:
         case IDC_PAUSE_EMU_HK:
+            if (dbg_req->is_ida)
+                break;
+
             dbg_req->dbg_active = 1;
             send_dbg_request(dbg_req, REQ_PAUSE);
             paused = true;

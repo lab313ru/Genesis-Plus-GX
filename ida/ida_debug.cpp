@@ -88,66 +88,66 @@ register_info_t registers[] =
     { "IR", NULL, RC_GENERAL, dt_dword, NULL, 0 },
 
     // VDP Registers
-    { "00", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "01", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "02", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "03", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "04", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "05", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "06", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "07", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "08", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "09", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "0A", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "0B", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "0C", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "0D", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "0E", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "0F", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "10", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "11", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "12", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "13", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "14", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "15", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "16", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "17", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "18", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "19", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "1A", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "1B", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "1C", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "1D", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "1E", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "1F", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v00", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v01", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v02", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v03", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v04", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v05", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v06", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v07", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v08", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v09", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v0A", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v0B", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v0C", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v0D", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v0E", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v0F", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v10", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v11", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v12", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v13", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v14", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v15", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v16", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v17", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v18", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v19", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v1A", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v1B", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v1C", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v1D", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v1E", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "v1F", NULL, RC_VDP, dt_byte, NULL, 0 },
 
     { "DMA_LEN", REGISTER_READONLY, RC_VDP, dt_word, NULL, 0 },
     { "DMA_SRC", REGISTER_ADDRESS | REGISTER_READONLY, RC_VDP, dt_dword, NULL, 0 },
     { "VDP_DST", REGISTER_ADDRESS | REGISTER_READONLY, RC_VDP, dt_dword, NULL, 0 },
 
     // Z80 regs
-    { "PC", NULL, RC_Z80, dt_dword, NULL, 0 },
-    { "SP", NULL, RC_Z80, dt_dword, NULL, 0 },
-    { "AF", NULL, RC_Z80, dt_dword, NULL, 0 },
-    { "BC", NULL, RC_Z80, dt_dword, NULL, 0 },
-    { "DE", NULL, RC_Z80, dt_dword, NULL, 0 },
-    { "HL", NULL, RC_Z80, dt_dword, NULL, 0 },
-    { "IX", NULL, RC_Z80, dt_dword, NULL, 0 },
-    { "IY", NULL, RC_Z80, dt_dword, NULL, 0 },
-    { "WZ", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zPC", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zSP", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zAF", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zBC", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zDE", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zHL", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zIX", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zIY", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zWZ", NULL, RC_Z80, dt_dword, NULL, 0 },
 
-    { "AF2", NULL, RC_Z80, dt_dword, NULL, 0 },
-    { "BC2", NULL, RC_Z80, dt_dword, NULL, 0 },
-    { "DE2", NULL, RC_Z80, dt_dword, NULL, 0 },
-    { "HL2", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zAF2", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zBC2", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zDE2", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "zHL2", NULL, RC_Z80, dt_dword, NULL, 0 },
 
-    { "R", NULL, RC_Z80, dt_byte, NULL, 0 },
-    { "R2", NULL, RC_Z80, dt_byte, NULL, 0 },
-    { "IFFI1", NULL, RC_Z80, dt_byte, NULL, 0 },
-    { "IFFI2", NULL, RC_Z80, dt_byte, NULL, 0 },
-    { "HALT", NULL, RC_Z80, dt_byte, NULL, 0 },
-    { "IM", NULL, RC_Z80, dt_byte, NULL, 0 },
-    { "I", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "zR", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "zR2", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "zIFFI1", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "zIFFI2", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "zHALT", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "zIM", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "zI", NULL, RC_Z80, dt_byte, NULL, 0 },
 };
 
 static const char *register_classes[] =
@@ -208,27 +208,19 @@ static void finish_execution()
     }
 }
 
-// Initialize debugger
-// Returns true-success
-// This function is called from the main thread
 static bool idaapi init_debugger(const char *hostname, int portnum, const char *password)
 {
     set_processor_type(ph.psnames[0], SETPROC_LOADER); // reset proc to "M68000"
     return true;
 }
 
-// Terminate debugger
-// Returns true-success
-// This function is called from the main thread
 static bool idaapi term_debugger(void)
 {
+    dbg_req->is_ida = 0;
+    close_shared_mem(&dbg_req);
     return true;
 }
 
-// Return information about the n-th "compatible" running process.
-// If n is 0, the processes list is reinitialized.
-// 1-ok, 0-failed, -1-network error
-// This function is called from the main thread
 static int idaapi process_get_info(procinfo_vec_t *procs)
 {
     return 0;
@@ -238,6 +230,8 @@ static int idaapi check_debugger_events(void *ud)
 {
     while (dbg_req->dbg_active || dbg_req->dbg_events_count)
     {
+        dbg_req->is_ida = 1;
+
         int event_index = recv_dbg_event(dbg_req, 0);
         if (event_index == -1)
         {
@@ -312,11 +306,6 @@ static int idaapi check_debugger_events(void *ud)
     return 0;
 }
 
-// Start an executable to debug
-// 1 - ok, 0 - failed, -2 - file not found (ask for process options)
-// 1|CRC32_MISMATCH - ok, but the input file crc does not match
-// -1 - network error
-// This function is called from debthread
 static int idaapi start_process(const char *path,
     const char *args,
     const char *startdir,
@@ -327,7 +316,6 @@ static int idaapi start_process(const char *path,
     g_events.clear();
 
     dbg_req = open_shared_mem();
-    dbg_req->is_ida = 1;
 
     if (!dbg_req)
     {
@@ -348,47 +336,24 @@ static int idaapi start_process(const char *path,
     return 1;
 }
 
-// rebase database if the debugged program has been rebased by the system
-// This function is called from the main thread
 static void idaapi rebase_if_required_to(ea_t new_base)
 {
 }
 
-// Prepare to pause the process
-// This function will prepare to pause the process
-// Normally the next get_debug_event() will pause the process
-// If the process is sleeping then the pause will not occur
-// until the process wakes up. The interface should take care of
-// this situation.
-// If this function is absent, then it won't be possible to pause the program
-// 1-ok, 0-failed, -1-network error
-// This function is called from debthread
 static int idaapi prepare_to_pause_process(void)
 {
     pause_execution();
     return 1;
 }
 
-// Stop the process.
-// May be called while the process is running or suspended.
-// Must terminate the process in any case.
-// The kernel will repeatedly call get_debug_event() and until PROCESS_EXIT.
-// In this mode, all other events will be automatically handled and process will be resumed.
-// 1-ok, 0-failed, -1-network error
-// This function is called from debthread
 static int idaapi emul_exit_process(void)
 {
     stop_debugging();
     finish_execution();
-    dbg_req->is_ida = 0;
-    close_shared_mem(&dbg_req);
 
     return 1;
 }
 
-// Get a pending debug event and suspend the process
-// This function will be called regularly by IDA.
-// This function is called from debthread
 static gdecode_t idaapi get_debug_event(debug_event_t *event, int timeout_ms)
 {
     while (true)
@@ -404,9 +369,6 @@ static gdecode_t idaapi get_debug_event(debug_event_t *event, int timeout_ms)
     return GDE_NO_EVENT;
 }
 
-// Continue after handling the event
-// 1-ok, 0-failed, -1-network error
-// This function is called from debthread
 static int idaapi continue_after_event(const debug_event_t *event)
 {
     ui_notification_t req = get_running_request();
@@ -423,26 +385,10 @@ static int idaapi continue_after_event(const debug_event_t *event)
     return 1;
 }
 
-// The following function will be called by the kernel each time
-// when it has stopped the debugger process for some reason,
-// refreshed the database and the screen.
-// The debugger module may add information to the database if it wants.
-// The reason for introducing this function is that when an event line
-// LOAD_DLL happens, the database does not reflect the memory state yet
-// and therefore we can't add information about the dll into the database
-// in the get_debug_event() function.
-// Only when the kernel has adjusted the database we can do it.
-// Example: for imported PE DLLs we will add the exported function
-// names to the database.
-// This function pointer may be absent, i.e. NULL.
-// This function is called from the main thread
 static void idaapi stopped_at_debug_event(bool dlls_added)
 {
 }
 
-// The following functions manipulate threads.
-// 1-ok, 0-failed, -1-network error
-// These functions are called from debthread
 static int idaapi thread_suspend(thid_t tid) // Suspend a running thread
 {
     return 0;
@@ -468,13 +414,6 @@ static int idaapi set_step_mode(thid_t tid, resume_mode_t resmod) // Run one ins
     return 1;
 }
 
-// Read thread registers
-//	tid	- thread id
-//	clsmask- bitmask of register classes to read
-//	regval - pointer to vector of regvals for all registers
-//			 regval is assumed to have debugger_t::registers_size elements
-// 1-ok, 0-failed, -1-network error
-// This function is called from debthread
 static int idaapi read_registers(thid_t tid, int clsmask, regval_t *values)
 {
     if (!dbg_req)
@@ -560,12 +499,6 @@ static void set_reg(register_type_t type, int reg_index, unsigned int value)
     send_dbg_request(dbg_req, REQ_SET_REG);
 }
 
-// Write one thread register
-//	tid	- thread id
-//	regidx - register index
-//	regval - new value of the register
-// 1-ok, 0-failed, -1-network error
-// This function is called from debthread
 static int idaapi write_register(thid_t tid, int regidx, const regval_t *value)
 {
     if (regidx >= REG_68K_D0 && regidx <= REG_68K_D7)
@@ -608,18 +541,6 @@ static int idaapi write_register(thid_t tid, int regidx, const regval_t *value)
     return 1;
 }
 
-//
-// The following functions manipulate bytes in the memory.
-//
-// Get information on the memory areas
-// The debugger module fills 'areas'. The returned vector MUST be sorted.
-// Returns:
-//   -3: use idb segmentation
-//   -2: no changes
-//   -1: the process does not exist anymore
-//	0: failed
-//	1: new memory layout is returned
-// This function is called from debthread
 static int idaapi get_memory_info(meminfo_vec_t &areas)
 {
     memory_info_t info;
@@ -649,11 +570,6 @@ static int idaapi get_memory_info(meminfo_vec_t &areas)
     return 1;
 }
 
-// Read process memory
-// Returns number of read bytes
-// 0 means read error
-// -1 means that the process does not exist anymore
-// This function is called from debthread
 static ssize_t idaapi read_memory(ea_t ea, void *buffer, size_t size)
 {
     if ((ea >= 0xA00000 && ea < 0xA0FFFF))
@@ -685,19 +601,12 @@ static ssize_t idaapi read_memory(ea_t ea, void *buffer, size_t size)
 
     return size;
 }
-// Write process memory
-// Returns number of written bytes, -1-fatal error
-// This function is called from debthread
+
 static ssize_t idaapi write_memory(ea_t ea, const void *buffer, size_t size)
 {
     return 0;
 }
 
-// Is it possible to set breakpoint?
-// Returns: BPT_...
-// This function is called from debthread or from the main thread if debthread
-// is not running yet.
-// It is called to verify hardware breakpoints.
 static int idaapi is_ok_bpt(bpttype_t type, ea_t ea, int len)
 {
     switch (type)
@@ -713,10 +622,6 @@ static int idaapi is_ok_bpt(bpttype_t type, ea_t ea, int len)
     return BPT_BAD_TYPE;
 }
 
-// Add/del breakpoints.
-// bpts array contains nadd bpts to add, followed by ndel bpts to del.
-// returns number of successfully modified bpts, -1-network error
-// This function is called from debthread
 static int idaapi update_bpts(update_bpt_info_t *bpts, int nadd, int ndel)
 {
     for (int i = 0; i < nadd; ++i)
@@ -790,23 +695,23 @@ static int idaapi update_bpts(update_bpt_info_t *bpts, int nadd, int ndel)
 debugger_t debugger =
 {
     IDD_INTERFACE_VERSION,
-    "GXIDA", // Short debugger name
-    0x8000 + 1, // Debugger API module id
-    "m68k", // Required processor name
+    "GXIDA",
+    0x8000 + 1,
+    "m68k",
     DBG_FLAG_NOHOST | DBG_FLAG_CAN_CONT_BPT | DBG_FLAG_FAKE_ATTACH | DBG_FLAG_SAFE | DBG_FLAG_NOPASSWORD | DBG_FLAG_NOSTARTDIR | DBG_FLAG_CONNSTRING | DBG_FLAG_ANYSIZE_HWBPT | DBG_FLAG_DEBTHREAD,
 
-    register_classes, // Array of register class names
-    RC_GENERAL, // Mask of default printed register classes
-    registers, // Array of registers
-    qnumber(registers), // Number of registers
+    register_classes,
+    RC_GENERAL,
+    registers,
+    qnumber(registers),
 
-    0x1000, // Size of a memory page
+    0x1000,
 
-    NULL, // bpt_bytes, // Array of bytes for a breakpoint instruction
-    NULL, // bpt_size, // Size of this array
-    0, // for miniidbs: use this value for the file type after attaching
+    NULL,
+    NULL,
+    0,
 
-    DBG_RESMOD_STEP_INTO | DBG_RESMOD_STEP_OVER, // Resume modes
+    DBG_RESMOD_STEP_INTO | DBG_RESMOD_STEP_OVER,
 
     init_debugger,
     term_debugger,
@@ -814,8 +719,8 @@ debugger_t debugger =
     process_get_info,
 
     start_process,
-    NULL, // attach_process,
-    NULL, // detach_process,
+    NULL,
+    NULL,
     rebase_if_required_to,
     prepare_to_pause_process,
     emul_exit_process,
@@ -823,7 +728,7 @@ debugger_t debugger =
     get_debug_event,
     continue_after_event,
 
-    NULL, // set_exception_info
+    NULL,
     stopped_at_debug_event,
 
     thread_suspend,
@@ -833,7 +738,7 @@ debugger_t debugger =
     read_registers,
     write_register,
 
-    NULL, // thread_get_sreg_base
+    NULL,
 
     get_memory_info,
     read_memory,
@@ -843,22 +748,22 @@ debugger_t debugger =
     update_bpts,
     NULL,
 
-    NULL, // open_file
-    NULL, // close_file
-    NULL, // read_file
-
-    NULL, // map_address,
-
-    NULL, // set_dbg_options
-    NULL, // get_debmod_extensions
+    NULL,
+    NULL,
     NULL,
 
-    NULL, // appcall
-    NULL, // cleanup_appcall
+    NULL,
 
-    NULL, // eval_lowcnd
+    NULL,
+    NULL,
+    NULL,
 
-    NULL, // write_file
+    NULL,
+    NULL,
 
-    NULL, // send_ioctl
+    NULL,
+
+    NULL,
+
+    NULL,
 };

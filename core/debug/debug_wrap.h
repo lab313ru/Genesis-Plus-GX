@@ -252,7 +252,7 @@ typedef struct {
     int dbg_events_count;
     debugger_event_t dbg_events[MAX_DBG_EVENTS];
     bpt_list_t bpt_list;
-    int dbg_active;
+    int dbg_active, dbg_paused;
     int is_ida;
 } dbg_request_t;
 #pragma pack(pop)
