@@ -20,6 +20,7 @@
 #include <loader.hpp>
 #include <idp.hpp>
 #include <offset.hpp>
+#include <kernwin.hpp>
 
 #include "ida_plugin.h"
 
@@ -31,7 +32,7 @@ static bool plugin_inited;
 static bool dbg_started;
 static bool my_dbg;
 
-static int idaapi hook_dbg(void *user_data, int notification_code, va_list va)
+static ssize_t idaapi hook_dbg(void *user_data, int notification_code, va_list va)
 {
     switch (notification_code)
     {
@@ -114,76 +115,77 @@ static const char* const dtyp_names[] =
 
 enum m68k_insn_type_t
 {
-    M68K_linea = CUSTOM_CMD_ITYPE,
+    M68K_linea = CUSTOM_INSN_ITYPE,
     M68K_linef,
 };
 
 typedef const regval_t &(idaapi *getreg_func_t)(const char *name, const regval_t *regvalues);
 
-static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
+static ssize_t idaapi hook_idp(void *user_data, int notification_code, va_list va)
 {
     switch (notification_code)
     {
-    case processor_t::idp_notify::custom_ana:
+    case processor_t::ev_ana_insn:
     {
-        (*ph.u_ana)();
+        insn_t *out = va_arg(va, insn_t *);
+        ph.ana_insn(out);
 
         uint16 itype = 0;
-        ea_t value = cmd.ea;
-        switch (get_byte(cmd.ea))
+        ea_t value = out->ea;
+        switch (get_byte(out->ea))
         {
         case 0xA0:
             itype = M68K_linea;
-            value = get_long(0x0A * sizeof(uint32));
+            value = get_dword(0x0A * sizeof(uint32));
             break;
         case 0xF0:
             itype = M68K_linef;
-            value = get_long(0x0B * sizeof(uint32));
+            value = get_dword(0x0B * sizeof(uint32));
             break;
         }
 
-        ea_t ea_c = get_first_cref_to(cmd.ea);
-        ea_t ea_d = get_first_dref_to(cmd.ea);
-        if (((ea_c != BADADDR && isCode(getFlags(ea_c))) || (ea_d != BADADDR)) && (itype == M68K_linea || itype == M68K_linef))
+        ea_t ea_c = get_first_cref_to(out->ea);
+        ea_t ea_d = get_first_dref_to(out->ea);
+        if (((ea_c != BADADDR && is_code(get_full_flags(ea_c))) || (ea_d != BADADDR)) && (itype == M68K_linea || itype == M68K_linef))
         {
-            cmd.itype = itype;
-            cmd.size = 2;
+            out->itype = itype;
+            out->size = 2;
 
-            cmd.Op1.type = o_near;
-            cmd.Op1.offb = 1;
-            cmd.Op1.dtyp = dt_dword;
-            cmd.Op1.addr = value;
-            cmd.Op1.phrase = 0x0A;
-            cmd.Op1.specflag1 = 2;
+            out->Op1.type = o_near;
+            out->Op1.offb = 1;
+            out->Op1.dtype = dt_dword;
+            out->Op1.addr = value;
+            out->Op1.phrase = 0x0A;
+            out->Op1.specflag1 = 2;
 
-            cmd.Op2.type = o_imm;
-            cmd.Op2.offb = 1;
-            cmd.Op2.dtyp = dt_byte;
-            cmd.Op2.value = get_byte(cmd.ea + 1);
+            out->Op2.type = o_imm;
+            out->Op2.offb = 1;
+            out->Op2.dtype = dt_byte;
+            out->Op2.value = get_byte(out->ea + 1);
         }
         else
         {
-            if (!isCode(getFlags(cmd.ea)))
+            if (!is_code(get_full_flags(out->ea)))
                 break;
         }
 
 #ifdef _DEBUG
         if (my_dbg)
         {
-            msg("cs=%x, ", cmd.cs);
-            msg("ip=%x, ", cmd.ip);
-            msg("ea=%x, ", cmd.ea);
-            msg("itype=%x, ", cmd.itype);
-            msg("size=%x, ", cmd.size);
-            msg("auxpref=%x, ", cmd.auxpref);
-            msg("segpref=%x, ", cmd.segpref);
-            msg("insnpref=%x, ", cmd.insnpref);
-            msg("insnpref=%x, ", cmd.insnpref);
+            msg("cs=%x, ", out->cs);
+            msg("ip=%x, ", out->ip);
+            msg("ea=%x, ", out->ea);
+            msg("itype=%x, ", out->itype);
+            msg("size=%x, ", out->size);
+            msg("auxpref=%x, ", out->auxpref);
+            msg("segpref=%x, ", out->segpref);
+            msg("insnpref=%x, ", out->insnpref);
+            msg("insnpref=%x, ", out->insnpref);
 
             msg("flags[");
-            if (cmd.flags & INSN_MACRO)
+            if (out->flags & INSN_MACRO)
                 msg("INSN_MACRO|");
-            if (cmd.flags & INSN_MODMAC)
+            if (out->flags & INSN_MODMAC)
                 msg("OF_OUTER_DISP");
             msg("]\n");
         }
@@ -191,7 +193,7 @@ static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
 
         for (int i = 0; i < UA_MAXOP; ++i)
         {
-            op_t &op = cmd.Operands[i];
+            op_t &op = out->ops[i];
 
 #ifdef _DEBUG
             if (my_dbg)
@@ -211,7 +213,7 @@ static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
                     msg("OF_SHOW");
                 msg("], ");
 
-                msg("dtyp[%s], ", dtyp_names[op.dtyp]);
+                msg("dtyp[%s], ", dtyp_names[op.dtype]);
 
                 if (op.type == o_reg)
                     msg("reg=%x, ", op.reg);
@@ -233,11 +235,10 @@ static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
 
                 msg("refinfo[");
 
-                flags_t _uFlag = uFlag;
-                flags_t flags = get_optype_flags1(_uFlag);
+                flags_t flags = get_optype_flags1(get_flags(out->ea));
                 opinfo_t buf;
 
-                if (get_opinfo(cmd.ea, op.n, flags, &buf))
+                if (get_opinfo(&buf, out->ea, op.n, flags))
                 {
                     msg("target=%x, ", buf.ri.target);
                     msg("base=%x, ", buf.ri.base);
@@ -278,12 +279,12 @@ static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
                     (op.addr >= 0xC00020 && op.addr <= 0xC0003F)) // VDP mirrors
                     op.addr &= 0xC000FF;
 
-                if (cmd.itype == 0x75 && op.n == 0 && op.phrase == 9 && (op.addr & 0xFFFF0000) == 0xFF0000)
+                if (out->itype == 0x75 && op.n == 0 && op.phrase == 9 && (op.addr & 0xFFFF0000) == 0xFF0000)
                 {
                     op.type = o_mem;
                     //op.specflag1 = 1;
                 }
-                else if ((cmd.itype == 0x76 || cmd.itype == 0x75 || cmd.itype == 0x74) && op.n == 0 &&
+                else if ((out->itype == 0x76 || out->itype == 0x75 || out->itype == 0x74) && op.n == 0 &&
                     (op.phrase == 0x09 || op.phrase == 0x0A) &&
                     (op.addr != 0 && op.addr <= 0xA00000) &&
                     op.specflag1 == 2) // lea table(pc),Ax; jsr func(pc); jmp label(pc)
@@ -291,79 +292,82 @@ static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
                     short diff = op.addr - value;
                     if (diff >= SHRT_MIN && diff <= SHRT_MAX)
                     {
-                        cmd.Op1.type = o_displ;
-                        cmd.Op1.offb = 2;
-                        cmd.Op1.dtyp = dt_dword;
-                        cmd.Op1.phrase = 0x5B;
-                        cmd.Op1.specflag1 = 0x10;
+                        out->Op1.type = o_displ;
+                        out->Op1.offb = 2;
+                        out->Op1.dtype = dt_dword;
+                        out->Op1.phrase = 0x5B;
+                        out->Op1.specflag1 = 0x10;
                     }
                 }
             } break;
             case o_imm:
             {
-                if (cmd.itype != 0x7F || op.n != 0) // movea
+                if (out->itype != 0x7F || op.n != 0) // movea
                     break;
 
-                if (op.value & 0xFF0000 && op.dtyp == dt_word) {
+                if (op.value & 0xFF0000 && op.dtype == dt_word) {
                     op.value &= 0xFFFF;
-                    op_offset(cmd.ea, op.n, REF_OFF32, BADADDR, 0xFF0000);
+                    op_offset(out->ea, op.n, REF_OFF32, BADADDR, 0xFF0000);
                 }
             } break;
             }
         }
 
-        return cmd.size + 1;
+        return out->size;
     } break;
-    case processor_t::idp_notify::custom_emu:
+    case processor_t::ev_emu_insn:
     {
-        if (cmd.itype == 0xB6) // trap #X
+        insn_t *insn = va_arg(va, insn_t *);
+        if (insn->itype == 0xB6) // trap #X
         {
-            (*ph.u_emu)();
+            insn_t insn2 = *insn;
+            ph.emu_insn(insn2);
 
             qstring name;
-            ea_t trap_addr = get_long((0x20 + (cmd.Op1.value & 0xF)) * sizeof(uint32));
-            get_func_name2(&name, trap_addr);
-            set_cmt(cmd.ea, name.c_str(), false);
-            ua_add_cref(cmd.Op1.offb, trap_addr, fl_CN);
-            return 2;
+            ea_t trap_addr = get_dword((0x20 + (insn2.Op1.value & 0xF)) * sizeof(uint32));
+            get_func_name(&name, trap_addr);
+            set_cmt(insn2.ea, name.c_str(), false);
+            insn2.add_cref(insn2.Op1.offb, trap_addr, fl_CN);
+            return 1;
         }
 
-        if ((cmd.itype == 0x76 || cmd.itype == 0x75 || cmd.itype == 0x74) &&
-            cmd.Op1.phrase == 0x5B && cmd.Op1.specflag1 == 0x10) // lea table(pc),Ax; jsr func(pc); jmp label(pc)
+        if ((insn->itype == 0x76 || insn->itype == 0x75 || insn->itype == 0x74) &&
+            insn->Op1.phrase == 0x5B && insn->Op1.specflag1 == 0x10) // lea table(pc),Ax; jsr func(pc); jmp label(pc)
         {
-            short diff = cmd.Op1.addr - cmd.ea;
+            short diff = insn->Op1.addr - insn->ea;
             if (diff >= SHRT_MIN && diff <= SHRT_MAX)
             {
-                ua_add_dref(cmd.Op1.offb, cmd.Op1.addr, dr_O);
+                insn->add_dref(insn->Op1.offb, insn->Op1.addr, dr_O);
 
-                if (cmd.itype != 0x74)
-                    ua_add_cref(0, cmd.ea + cmd.size, fl_F);
+                if (insn->itype != 0x74)
+                    insn->add_cref(0, insn->ea + insn->size, fl_F);
 
-                return 2;
+                return 1;
             }
         }
 
-        if (cmd.itype == M68K_linea || cmd.itype == M68K_linef)
+        if (insn->itype == M68K_linea || insn->itype == M68K_linef)
         {
-            ua_add_cref(0, cmd.Op1.addr, fl_CN);
-            ua_add_cref(cmd.Op1.offb, cmd.ea + cmd.size, fl_F);
-            return 2;
+            insn->add_cref(0, insn->Op1.addr, fl_CN);
+            insn->add_cref(insn->Op1.offb, insn->ea + insn->size, fl_F);
+            return 1;
         }
     } break;
-    case processor_t::idp_notify::custom_mnem:
+    case processor_t::ev_out_mnem:
     {
-        if (cmd.itype != M68K_linea && cmd.itype != M68K_linef)
+        outctx_t *outctx = va_arg(va, outctx_t *);
+        if (outctx->insn.itype != M68K_linea && outctx->insn.itype != M68K_linef)
             break;
 
         char *outbuffer = va_arg(va, char *);
         size_t bufsize = va_arg(va, size_t);
 
-        const char *mnem = (cmd.itype == M68K_linef) ? "line_f" : "line_a";
+        const char *mnem = (outctx->insn.itype == M68K_linef) ? "line_f" : "line_a";
 
         ::qstrncpy(outbuffer, mnem, bufsize);
         return 2;
     } break;
-    case processor_t::idp_notify::get_operand_info:
+    case processor_t::ev_get_idd_opinfo:
     {
         ea_t ea = va_arg(va, ea_t);
         int n = va_arg(va, int);
@@ -378,10 +382,11 @@ static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
         opinf->value.ival = 0;
         opinf->value_size = 4;
 
-        if (decode_insn(ea))
+        insn_t out;
+        if (decode_insn(&out, ea))
         {
-            insn_t _cmd = cmd;
-            op_t op = _cmd.Operands[n];
+            insn_t _cmd = out;
+            op_t op = _cmd.ops[n];
 
 #ifdef _DEBUG
             if (my_dbg)
@@ -418,7 +423,7 @@ static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
                     msg("OF_SHOW");
                 msg("], ");
 
-                msg("dtyp[%s], ", dtyp_names[op.dtyp]);
+                msg("dtyp[%s], ", dtyp_names[op.dtype]);
 
                 if (op.type == o_reg)
                     msg("reg=%x, ", op.reg);
@@ -440,11 +445,10 @@ static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
 
                 msg("refinfo[");
 
-                flags_t _uFlag = uFlag;
-                flags_t flags = get_optype_flags1(_uFlag);
+                flags_t flags = get_optype_flags1(get_flags(_cmd.ea));
                 opinfo_t buf;
 
-                if (get_opinfo(cmd.ea, op.n, flags, &buf))
+                if (get_opinfo(&buf, _cmd.ea, op.n, flags))
                 {
                     msg("target=%x, ", buf.ri.target);
                     msg("base=%x, ", buf.ri.base);
@@ -472,7 +476,7 @@ static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
 #endif
 
             int size = 0;
-            switch (op.dtyp)
+            switch (op.dtype)
             {
             case dt_byte:
                 size = 1;
@@ -493,13 +497,12 @@ static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
             case o_near:
             case o_imm:
             {
-                uFlag = get_flags_novalue(ea);
                 flags_t flags;
 
                 switch (n)
                 {
-                case 0: flags = get_optype_flags0(uFlag); break;
-                case 1: flags = get_optype_flags1(uFlag); break;
+                case 0: flags = get_optype_flags0(get_flags(ea)); break;
+                case 1: flags = get_optype_flags1(get_flags(ea)); break;
                 default: flags = 0; break;
                 }
 
@@ -511,7 +514,7 @@ static int idaapi hook_idp(void *user_data, int notification_code, va_list va)
                 }
 
                 opinfo_t info;
-                if (get_opinfo(ea, n, flags, &info) != NULL)
+                if (get_opinfo(&info, ea, n, flags) != NULL)
                 {
                     opinf->ea += info.ri.base;
                 }
@@ -1121,31 +1124,32 @@ struct smd_constant_action_t : public action_handler_t
 {
     virtual int idaapi activate(action_activation_ctx_t * ctx)
     {
-        char name[250];
+        qstring name;
         ea_t ea = get_screen_ea();
-        if (isEnabled(ea)) // address belongs to disassembly
+        if (is_mapped(ea)) // address belongs to disassembly
         {
-            if (get_cmt(ea, false, name, sizeof(name)) != -1) // remove previous comment and exit
+            if (get_cmt(&name, ea, false) != -1) // remove previous comment and exit
             {
                 set_cmt(ea, "", false);
                 return 1;
             }
 
-            decode_insn(ea);
-            ua_outop2(ea, name, sizeof(name), 1);
-            tag_remove(name, name, sizeof(name));
+            insn_t out;
+            decode_insn(&out, ea);
+            print_operand(&name, ea, 1);
+            tag_remove(&name, name);
 
             uval_t val = 0;
-            get_operand_immvals(ea, 0, &val);
+            get_immvals(&val, ea, 0, get_flags(ea));
             uint32 value = (uint32)val;
-            if (cmd.Op1.type == o_imm && cmd.Op2.type == o_reg && !::qstrcmp(name, "sr"))
+            if (out.Op1.type == o_imm && out.Op2.type == o_reg && !::qstrcmp(name.c_str(), "sr"))
             {
                 do_cmt_sr_ccr_reg_const(ea, value);
             }
-            else if (cmd.Op1.type == o_imm && cmd.Op2.type == o_mem &&
-                (cmd.Op2.addr == 0xA11200 || cmd.Op2.addr == 0xA11100))
+            else if (out.Op1.type == o_imm && out.Op2.type == o_mem &&
+                (out.Op2.addr == 0xA11200 || out.Op2.addr == 0xA11100))
             {
-                do_cmt_z80_bus_command(ea, cmd.Op2.addr, value);
+                do_cmt_z80_bus_command(ea, out.Op2.addr, value);
             }
             else if (is_vdp_rw_cmd(value))
             {
@@ -1171,19 +1175,15 @@ static smd_constant_action_t smd_constant;
 static action_desc_t smd_constant_action = ACTION_DESC_LITERAL(smd_constant_name, "Identify SMD constant", &smd_constant, "J", NULL, -1);
 
 //--------------------------------------------------------------------------
-static int idaapi hook_ui(void *user_data, int notification_code, va_list va)
+static ssize_t idaapi hook_ui(void *user_data, int notification_code, va_list va)
 {
-    if (notification_code == ui_populating_tform_popup)
+    if (notification_code == ui_populating_widget_popup)
     {
-        TForm *f = va_arg(va, TForm *);
-        if (get_tform_type(f) == BWN_DISASM)
+        TWidget *widget = va_arg(va, TWidget *);
+        if (get_widget_type(widget) == BWN_DISASM)
         {
             TPopupMenu *p = va_arg(va, TPopupMenu *);
-            TCustomControl *view = get_tform_idaview(f);
-            if (view != NULL)
-            {
-                attach_action_to_popup(f, p, smd_constant_name);
-            }
+            attach_action_to_popup(widget, p, smd_constant_name);
         }
     }
 
@@ -1232,8 +1232,9 @@ static void idaapi term(void)
 
 //--------------------------------------------------------------------------
 // The plugin method - usually is not used for debugger plugins
-static void idaapi run(int /*arg*/)
+static bool idaapi run(size_t arg)
 {
+    return false;
 }
 
 //--------------------------------------------------------------------------

@@ -9,8 +9,6 @@
 
 #include "debug_wrap.h"
 
-#define BREAKPOINTS_BASE 0x00D00000
-
 static dbg_request_t *dbg_req = NULL;
 
 static void pause_execution()
@@ -54,58 +52,10 @@ static const char *const SRReg[] =
     "T"
 };
 
-static const char *const ALLOW_FLAGS_DA[] =
-{
-    "_A07",
-    "_A06",
-    "_A05",
-    "_A04",
-    "_A03",
-    "_A02",
-    "_A01",
-    "_A00",
+#define RC_GENERAL (1 << 0)
+#define RC_VDP (1 << 1)
+#define RC_Z80 (1 << 2)
 
-    "_D07",
-    "_D06",
-    "_D05",
-    "_D04",
-    "_D03",
-    "_D02",
-    "_D01",
-    "_D00",
-};
-
-static const char *const ALLOW_FLAGS_V[] =
-{
-    "_V23",
-    "_V22",
-    "_V21",
-    "_V20",
-    "_V19",
-    "_V18",
-    "_V17",
-    "_V16",
-    "_V15",
-    "_V14",
-    "_V13",
-    "_V12",
-    "_V11",
-    "_V10",
-    "_V09",
-    "_V08",
-    "_V07",
-    "_V06",
-    "_V05",
-    "_V04",
-    "_V03",
-    "_V02",
-    "_V01",
-    "_V00",
-};
-
-#define RC_GENERAL 1
-#define RC_VDP 2
-#define RC_BREAK 4
 
 register_info_t registers[] =
 {
@@ -125,94 +75,86 @@ register_info_t registers[] =
     { "A4", REGISTER_ADDRESS, RC_GENERAL, dt_dword, NULL, 0 },
     { "A5", REGISTER_ADDRESS, RC_GENERAL, dt_dword, NULL, 0 },
     { "A6", REGISTER_ADDRESS, RC_GENERAL, dt_dword, NULL, 0 },
-    { "A7", REGISTER_ADDRESS | REGISTER_SP, RC_GENERAL, dt_dword, NULL, 0 },
+    { "A7", REGISTER_ADDRESS, RC_GENERAL, dt_dword, NULL, 0 },
 
     { "PC", REGISTER_ADDRESS | REGISTER_IP, RC_GENERAL, dt_dword, NULL, 0 },
-
     { "SR", NULL, RC_GENERAL, dt_word, SRReg, 0xFFFF },
 
-    { "DMA_LEN", REGISTER_READONLY, RC_GENERAL, dt_word, NULL, 0 },
-    { "DMA_SRC", REGISTER_ADDRESS | REGISTER_READONLY, RC_GENERAL, dt_dword, NULL, 0 },
-    { "VDP_DST", REGISTER_ADDRESS | REGISTER_READONLY, RC_GENERAL, dt_dword, NULL, 0 },
+    { "SP", REGISTER_ADDRESS | REGISTER_SP, RC_GENERAL, dt_dword, NULL, 0 },
+    { "USP", REGISTER_ADDRESS, RC_GENERAL, dt_dword, NULL, 0 },
+    { "ISP", REGISTER_ADDRESS, RC_GENERAL, dt_dword, NULL, 0 },
 
-    // Register Breakpoints
-    { "D00", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "D01", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "D02", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "D03", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "D04", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "D05", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "D06", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "D07", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-
-    { "A00", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "A01", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "A02", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "A03", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "A04", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "A05", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "A06", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-    { "A07", REGISTER_ADDRESS, RC_BREAK, dt_dword, NULL, 0 },
-
-    { "V00", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V01", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V02", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V03", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V04", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V05", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V06", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V07", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V08", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V09", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V10", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V11", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V12", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V13", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V14", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V15", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V16", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V17", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V18", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V19", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V20", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V21", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V22", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "V23", NULL, RC_BREAK, dt_byte, NULL, 0 },
-    { "ALLOW0", NULL, RC_BREAK, dt_word, ALLOW_FLAGS_DA, 0xFFFF },
-    { "ALLOW1", NULL, RC_BREAK, dt_3byte, ALLOW_FLAGS_V, 0xFFFFFF },
+    { "PPC", REGISTER_ADDRESS | REGISTER_READONLY, RC_GENERAL, dt_dword, NULL, 0 },
+    { "IR", NULL, RC_GENERAL, dt_dword, NULL, 0 },
 
     // VDP Registers
-    { "Set1", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "Set2", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "PlaneA", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "Window", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "PlaneB", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "Sprite", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "Reg6", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "BgClr", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "Reg8", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "Reg9", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "HInt", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "Set3", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "Set4", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "HScrl", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "Reg14", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "WrInc", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "ScrSz", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "WinX", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "WinY", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "LenLo", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "LenHi", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "SrcLo", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "SrcMid", NULL, RC_VDP, dt_byte, NULL, 0 },
-    { "SrcHi", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "00", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "01", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "02", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "03", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "04", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "05", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "06", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "07", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "08", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "09", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "0A", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "0B", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "0C", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "0D", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "0E", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "0F", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "10", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "11", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "12", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "13", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "14", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "15", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "16", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "17", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "18", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "19", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "1A", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "1B", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "1C", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "1D", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "1E", NULL, RC_VDP, dt_byte, NULL, 0 },
+    { "1F", NULL, RC_VDP, dt_byte, NULL, 0 },
+
+    { "DMA_LEN", REGISTER_READONLY, RC_VDP, dt_word, NULL, 0 },
+    { "DMA_SRC", REGISTER_ADDRESS | REGISTER_READONLY, RC_VDP, dt_dword, NULL, 0 },
+    { "VDP_DST", REGISTER_ADDRESS | REGISTER_READONLY, RC_VDP, dt_dword, NULL, 0 },
+
+    // Z80 regs
+    { "PC", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "SP", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "AF", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "BC", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "DE", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "HL", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "IX", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "IY", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "WZ", NULL, RC_Z80, dt_dword, NULL, 0 },
+
+    { "AF2", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "BC2", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "DE2", NULL, RC_Z80, dt_dword, NULL, 0 },
+    { "HL2", NULL, RC_Z80, dt_dword, NULL, 0 },
+
+    { "R", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "R2", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "IFFI1", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "IFFI2", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "HALT", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "IM", NULL, RC_Z80, dt_byte, NULL, 0 },
+    { "I", NULL, RC_Z80, dt_byte, NULL, 0 },
 };
 
 static const char *register_classes[] =
 {
     "General Registers",
     "VDP Registers",
-    "Register Breakpoints",
+    "Z80 Registers",
     NULL
 };
 
@@ -235,11 +177,11 @@ static void apply_codemap()
         if (g_codemap[i].second && g_codemap[i].first)
         {
             auto_make_code((ea_t)i);
-            noUsed((ea_t)i);
+            plan_ea((ea_t)i);
         }
-        showAddr((ea_t)i);
+        show_addr((ea_t)i);
     }
-    noUsed(0, MAXROMSIZE);
+    plan_range(0, MAXROMSIZE);
 
     for (size_t i = 0; i < MAXROMSIZE; ++i)
     {
@@ -247,11 +189,11 @@ static void apply_codemap()
         {
             if (add_func(i, BADADDR))
                 add_cref(g_codemap[i].first, i, fl_CN);
-            noUsed((ea_t)i);
+            plan_ea((ea_t)i);
         }
-        showAddr((ea_t)i);
+        show_addr((ea_t)i);
     }
-    noUsed(0, MAXROMSIZE);
+    plan_range(0, MAXROMSIZE);
     msg("Codemap applied.\n");
 }
 
@@ -269,11 +211,9 @@ static void finish_execution()
 // Initialize debugger
 // Returns true-success
 // This function is called from the main thread
-static bool idaapi init_debugger(const char *hostname,
-    int port_num,
-    const char *password)
+static bool idaapi init_debugger(const char *hostname, int portnum, const char *password)
 {
-    set_processor_type(ph.psnames[0], SETPROC_COMPAT); // reset proc to "M68000"
+    set_processor_type(ph.psnames[0], SETPROC_LOADER); // reset proc to "M68000"
     return true;
 }
 
@@ -289,7 +229,7 @@ static bool idaapi term_debugger(void)
 // If n is 0, the processes list is reinitialized.
 // 1-ok, 0-failed, -1-network error
 // This function is called from the main thread
-static int idaapi process_get_info(int n, process_info_t *info)
+static int idaapi process_get_info(procinfo_vec_t *procs)
 {
     return 0;
 }
@@ -545,44 +485,76 @@ static int idaapi read_registers(thid_t tid, int clsmask, regval_t *values)
         dbg_req->regs_data.type = REG_TYPE_M68K;
         send_dbg_request(dbg_req, REQ_GET_REGS);
 
-        regs_68k_data_t *reg_vals = &dbg_req->regs_data.regs_68k.values;
+        regs_68k_data_t *reg_vals = &dbg_req->regs_data.regs_68k;
 
-        values[0].ival = reg_vals->d0;
-        values[1].ival = reg_vals->d1;
-        values[2].ival = reg_vals->d2;
-        values[3].ival = reg_vals->d3;
-        values[4].ival = reg_vals->d4;
-        values[5].ival = reg_vals->d5;
-        values[6].ival = reg_vals->d6;
-        values[7].ival = reg_vals->d7;
+        values[REG_68K_D0].ival = reg_vals->d0;
+        values[REG_68K_D1].ival = reg_vals->d1;
+        values[REG_68K_D2].ival = reg_vals->d2;
+        values[REG_68K_D3].ival = reg_vals->d3;
+        values[REG_68K_D4].ival = reg_vals->d4;
+        values[REG_68K_D5].ival = reg_vals->d5;
+        values[REG_68K_D6].ival = reg_vals->d6;
+        values[REG_68K_D7].ival = reg_vals->d7;
 
-		values[8].ival = reg_vals->a0;
-		values[9].ival = reg_vals->a1;
-		values[10].ival = reg_vals->a2;
-		values[11].ival = reg_vals->a3;
-		values[12].ival = reg_vals->a4;
-		values[13].ival = reg_vals->a5;
-		values[14].ival = reg_vals->a6;
-		values[15].ival = reg_vals->a7;
+		values[REG_68K_A0].ival = reg_vals->a0;
+		values[REG_68K_A1].ival = reg_vals->a1;
+		values[REG_68K_A2].ival = reg_vals->a2;
+		values[REG_68K_A3].ival = reg_vals->a3;
+		values[REG_68K_A4].ival = reg_vals->a4;
+		values[REG_68K_A5].ival = reg_vals->a5;
+		values[REG_68K_A6].ival = reg_vals->a6;
+		values[REG_68K_A7].ival = reg_vals->a7;
 
-        values[16].ival = reg_vals->pc & 0xFFFFFF;
-        values[17].ival = reg_vals->sr;
+        values[REG_68K_PC].ival = reg_vals->pc & 0xFFFFFF;
+        values[REG_68K_SR].ival = reg_vals->sr;
+        values[REG_68K_SP].ival = reg_vals->sp & 0xFFFFFF;
+        values[REG_68K_PPC].ival = reg_vals->ppc & 0xFFFFFF;
+        values[REG_68K_IR].ival = reg_vals->ir;
     }
 
     if (clsmask & RC_VDP)
     {
+        dbg_req->regs_data.type = REG_TYPE_VDP;
+        send_dbg_request(dbg_req, REQ_GET_REGS);
+
+        vdp_regs_t *vdp_regs = &dbg_req->regs_data.vdp_regs;
+
+        for (int i = 0; i < sizeof(vdp_regs->regs_vdp) / sizeof(vdp_regs->regs_vdp[0]); ++i)
+        {
+            values[REG_VDP_00 + i].ival = vdp_regs->regs_vdp[i];
+        }
+
+        values[REG_VDP_DMA_LEN].ival = vdp_regs->dma_len;
+        values[REG_VDP_DMA_SRC].ival = vdp_regs->dma_src;
+        values[REG_VDP_DMA_DST].ival = vdp_regs->dma_dst;
     }
 
-    if (clsmask & RC_BREAK)
+    if (clsmask & RC_Z80)
     {
+        dbg_req->regs_data.type = REG_TYPE_Z80;
+        send_dbg_request(dbg_req, REQ_GET_REGS);
+
+        regs_z80_data_t *z80_regs = &dbg_req->regs_data.regs_z80;
+
+        for (int i = 0; i < (REG_Z80_I - REG_Z80_PC + 1); ++i)
+        {
+            if (i >= 0 && i <= 12) // PC <-> HL2
+            {
+                values[REG_Z80_PC + i].ival = ((unsigned int *)&z80_regs->pc)[i];
+            }
+            else if (i >= 13 && i <= 19) // R <-> I
+            {
+                values[REG_Z80_PC + i].ival = ((unsigned char *)&z80_regs->r)[i - 13];
+            }
+        }
     }
 
     return 1;
 }
 
-static void set_m68k_reg(int reg_index, unsigned int value)
+static void set_reg(register_type_t type, int reg_index, unsigned int value)
 {
-    dbg_req->regs_data.type = REG_TYPE_M68K;
+    dbg_req->regs_data.type = type;
     dbg_req->regs_data.any_reg.index = reg_index;
     dbg_req->regs_data.any_reg.val = value;
     send_dbg_request(dbg_req, REQ_SET_REG);
@@ -596,21 +568,41 @@ static void set_m68k_reg(int reg_index, unsigned int value)
 // This function is called from debthread
 static int idaapi write_register(thid_t tid, int regidx, const regval_t *value)
 {
-    if (regidx >= 0 && regidx <= 7)
+    if (regidx >= REG_68K_D0 && regidx <= REG_68K_D7)
     {
-        set_m68k_reg(regidx - 0, (uint32)value->ival);
+        set_reg(REG_TYPE_M68K, regidx - REG_68K_D0, (uint32)value->ival);
     }
-    else if (regidx >= 8 && regidx <= 15)
+    else if (regidx >= REG_68K_A0 && regidx <= REG_68K_A7)
     {
-        set_m68k_reg(regidx - 8, (uint32)value->ival);
+        set_reg(REG_TYPE_M68K, regidx - REG_68K_A0, (uint32)value->ival);
     }
-    else if (regidx == 15)
+    else if (regidx == REG_68K_PC)
     {
-        set_m68k_reg(16, (uint32)value->ival & 0xFFFFFF);
+        set_reg(REG_TYPE_M68K, REG_68K_PC, (uint32)value->ival & 0xFFFFFF);
     }
-    else if (regidx == 16)
+    else if (regidx == REG_68K_SR)
     {
-        set_m68k_reg(17, (uint16)value->ival);
+        set_reg(REG_TYPE_M68K, REG_68K_SR, (uint16)value->ival);
+    }
+    else if (regidx == REG_68K_SP)
+    {
+        set_reg(REG_TYPE_M68K, REG_68K_SP, (uint32)value->ival & 0xFFFFFF);
+    }
+    else if (regidx == REG_68K_USP)
+    {
+        set_reg(REG_TYPE_M68K, REG_68K_USP, (uint32)value->ival & 0xFFFFFF);
+    }
+    else if (regidx == REG_68K_ISP)
+    {
+        set_reg(REG_TYPE_M68K, REG_68K_ISP, (uint32)value->ival & 0xFFFFFF);
+    }
+    else if (regidx >= REG_VDP_00 && regidx <= REG_VDP_1F)
+    {
+        set_reg(REG_TYPE_VDP, regidx - REG_VDP_00, value->ival & 0xFF);
+    }
+    else if (regidx >= REG_Z80_PC && regidx <= REG_Z80_I)
+    {
+        set_reg(REG_TYPE_Z80, regidx - REG_Z80_PC, value->ival);
     }
 
     return 1;
@@ -635,17 +627,16 @@ static int idaapi get_memory_info(meminfo_vec_t &areas)
     // Don't remove this loop
     for (int i = 0; i < get_segm_qty(); ++i)
     {
-        char buf[256];
-
         segment_t *segm = getnseg(i);
 
-        info.startEA = segm->startEA;
-        info.endEA = segm->endEA;
+        info.start_ea = segm->start_ea;
+        info.end_ea = segm->end_ea;
 
-        get_segm_name(segm, buf, sizeof(buf));
+        qstring buf;
+        get_segm_name(&buf, segm);
         info.name = buf;
 
-        get_segm_class(segm, buf, sizeof(buf));
+        get_segm_class(&buf, segm);
         info.sclass = buf;
 
         info.sbase = 0;

@@ -198,190 +198,6 @@ static void disable_when_ida()
     EnableWindow(GetDlgItem(disHwnd, IDC_PAUSE_EMU), dbg_req->is_ida ? FALSE : TRUE);
 }
 
-static void resize_func()
-{
-    RECT r, r2;
-    GetWindowRect(disHwnd, &r);
-
-    SetWindowPos(listHwnd, NULL,
-        r.left,
-        r.top,
-        ((r.right - r.left) / 3) + 50,
-        r.bottom - r.top - 50,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-
-    GetWindowRect(listHwnd, &r);
-    MapWindowPoints(HWND_DESKTOP, disHwnd, (LPPOINT)&r, 2);
-
-    int left = r.right + 10;
-    int top = r.top + 5;
-
-    const int widthL = 30; // label
-    const int height = 21;
-    const int widthE = 65; // edit
-
-    for (int i = 0; i <= (IDC_REG_D7 - IDC_REG_D0); ++i)
-    {
-        HWND hDL = GetDlgItem(disHwnd, IDC_REG_D0_L + i);
-        HWND hDE = GetDlgItem(disHwnd, IDC_REG_D0 + i);
-        HWND hAL = GetDlgItem(disHwnd, IDC_REG_A0_L + i);
-        HWND hAE = GetDlgItem(disHwnd, IDC_REG_A0 + i);
-        SendMessage(hDE, EM_SETLIMITTEXT, 8, 0);
-        SendMessage(hAE, EM_SETLIMITTEXT, 8, 0);
-
-        SetWindowPos(hDL, HWND_TOP,
-            left,
-            top + i * (height + 5) + 3,
-            widthL,
-            height,
-            SWP_NOZORDER | SWP_NOACTIVATE);
-        InvalidateRect(hDL, NULL, FALSE);
-
-        SetWindowPos(hDE, HWND_TOP,
-            left + widthL + 3,
-            top + i * (height + 5),
-            widthE,
-            height,
-            SWP_NOZORDER | SWP_NOACTIVATE);
-        InvalidateRect(hDE, NULL, FALSE);
-
-        SetWindowPos(hAL, HWND_TOP,
-            left + widthL + 3 + widthE + 5,
-            top + i * (height + 5) + 3,
-            widthL,
-            height,
-            SWP_NOZORDER | SWP_NOACTIVATE);
-        InvalidateRect(hAL, NULL, FALSE);
-
-        SetWindowPos(hAE, HWND_TOP,
-            left + widthL + 3 + widthE + 5 + widthL + 3,
-            top + i * (height + 5),
-            widthE,
-            height,
-            SWP_NOZORDER | SWP_NOACTIVATE);
-        InvalidateRect(hAE, NULL, FALSE);
-    }
-
-    HWND hPCL = GetDlgItem(disHwnd, IDC_REG_PC_L);
-    HWND hPCE = GetDlgItem(disHwnd, IDC_REG_PC);
-    HWND hSPL = GetDlgItem(disHwnd, IDC_REG_SP_L);
-    HWND hSPE = GetDlgItem(disHwnd, IDC_REG_SP);
-    HWND hPPCL = GetDlgItem(disHwnd, IDC_REG_PPC_L);
-    HWND hPPCE = GetDlgItem(disHwnd, IDC_REG_PPC);
-    HWND hSRL = GetDlgItem(disHwnd, IDC_REG_SR_L);
-    HWND hSRE = GetDlgItem(disHwnd, IDC_REG_SR);
-    SendMessage(hPCE, EM_SETLIMITTEXT, 8, 0);
-    SendMessage(hSPE, EM_SETLIMITTEXT, 8, 0);
-    SendMessage(hPPCE, EM_SETLIMITTEXT, 8, 0);
-    SendMessage(hSRE, EM_SETLIMITTEXT, 4, 0);
-
-    SetWindowPos(hPCL, NULL,
-        left,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3,
-        widthL,
-        height,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(hPCL, NULL, FALSE);
-
-    SetWindowPos(hPCE, NULL,
-        left + widthL + 3,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5),
-        widthE,
-        height,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(hPCE, NULL, FALSE);
-
-    SetWindowPos(hSPL, NULL,
-        left + widthL + 3 + widthE + 5,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3,
-        widthL,
-        height,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(hSPL, NULL, FALSE);
-
-    SetWindowPos(hSPE, NULL,
-        left + widthL + 3 + widthE + 5 + widthL + 3,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5),
-        widthE,
-        height,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(hSPE, NULL, FALSE);
-
-    SetWindowPos(hPPCL, NULL,
-        left,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + (height + 5),
-        widthL,
-        height,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(hPPCL, NULL, FALSE);
-
-    SetWindowPos(hPPCE, NULL,
-        left + widthL + 3,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + (height + 5),
-        widthE,
-        height,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(hPPCE, NULL, FALSE);
-
-    SetWindowPos(hSRL, NULL,
-        left + widthL + 3 + widthE + 5,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + 3 + (height + 5),
-        widthL,
-        height,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(hSRL, NULL, FALSE);
-
-    SetWindowPos(hSRE, NULL,
-        left + widthL + 3 + widthE + 5 + widthL + 3,
-        top + 5 + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + (height + 5),
-        widthE,
-        height,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(hSRE, NULL, FALSE);
-
-    HWND F7 = GetDlgItem(disHwnd, IDC_STEP_INTO);
-    HWND F8 = GetDlgItem(disHwnd, IDC_STEP_OVER);
-    HWND F9 = GetDlgItem(disHwnd, IDC_RUN_EMU);
-    HWND PAUSE = GetDlgItem(disHwnd, IDC_PAUSE_EMU);
-    GetClientRect(F7, &r2);
-
-    top += 5;
-
-    SetWindowPos(F7, NULL,
-        left + 10,
-        top + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + height + (height + 5) * 2,
-        r2.right,
-        r2.bottom,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(F7, NULL, FALSE);
-
-    SetWindowPos(F8, NULL,
-        left + 10 + (r2.right + 2) * 1 + 10,
-        top + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + height + (height + 5) * 2,
-        r2.right,
-        r2.bottom,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(F8, NULL, FALSE);
-
-    SetWindowPos(F9, NULL,
-        left + 10,
-        top + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + height + (height + 5) * 2 + r2.bottom + 2,
-        r2.right,
-        r2.bottom,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(F9, NULL, FALSE);
-
-    SetWindowPos(PAUSE, NULL,
-        left + 10 + (r2.right + 2) * 1 + 10,
-        top + (IDC_REG_A0 - IDC_REG_D0) * (height + 5) + height + (height + 5) * 2 + r2.bottom + 2,
-        r2.right,
-        r2.bottom,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    InvalidateRect(PAUSE, NULL, FALSE);
-
-    SendMessage(GetDlgItem(disHwnd, IDC_BPT_ADDR), EM_SETLIMITTEXT, 6, 0);
-}
-
 static void update_sr_view(unsigned short sr)
 {
     char tmp[4] = "000";
@@ -446,10 +262,11 @@ static void set_m68k_reg(int reg_index, unsigned int value)
 
 static void update_regs()
 {
-    dbg_req->regs_data.type = REG_TYPE_M68K;
+    dbg_req->regs_data.type = REG_TYPE_M68K | REG_TYPE_VDP;
     send_dbg_request(dbg_req, REQ_GET_REGS);
 
-    regs_68k_data_t *reg_vals = &dbg_req->regs_data.regs_68k.values;
+    regs_68k_data_t *reg_vals = &dbg_req->regs_data.regs_68k;
+    vdp_regs_t *vdp_regs = &dbg_req->regs_data.vdp_regs;
 
     last_pc = reg_vals->pc;
 
@@ -489,15 +306,21 @@ static void update_regs()
 
     if (currentControlFocus != IDC_REG_PC)
         UpdateDlgItemHex(disHwnd, IDC_REG_PC, 8, reg_vals->pc);
-    if (currentControlFocus != IDC_REG_SP)
-        UpdateDlgItemHex(disHwnd, IDC_REG_SP, 8, reg_vals->sp);
-    if (currentControlFocus != IDC_REG_PPC)
-        UpdateDlgItemHex(disHwnd, IDC_REG_PPC, 8, reg_vals->ppc);
     if (currentControlFocus != IDC_REG_SR)
     {
         UpdateDlgItemHex(disHwnd, IDC_REG_SR, 4, reg_vals->sr);
         update_sr_view(reg_vals->sr);
     }
+    if (currentControlFocus != IDC_REG_SP)
+        UpdateDlgItemHex(disHwnd, IDC_REG_SP, 8, reg_vals->sp);
+    if (currentControlFocus != IDC_REG_PPC)
+        UpdateDlgItemHex(disHwnd, IDC_REG_PPC, 8, reg_vals->ppc);
+    if (currentControlFocus != IDC_REG_DMA_LEN)
+        UpdateDlgItemHex(disHwnd, IDC_REG_DMA_LEN, 6, vdp_regs->dma_len);
+    if (currentControlFocus != IDC_REG_DMA_SRC)
+        UpdateDlgItemHex(disHwnd, IDC_REG_DMA_SRC, 8, vdp_regs->dma_src);
+    if (currentControlFocus != IDC_REG_DMA_DST)
+        UpdateDlgItemHex(disHwnd, IDC_REG_DMA_DST, 8, vdp_regs->dma_dst);
 }
 
 static void set_listing_text()
@@ -931,11 +754,6 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         }
         return FALSE;
     } break;
-    case WM_SIZE:
-    {
-        resize_func();
-        break;
-    }
     case WM_NOTIFY:
     {
         switch (((LPNMHDR)lParam)->code)
@@ -1089,64 +907,63 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                 switch (LOWORD(wParam))
                 {
                 case IDC_REG_D0:
-                    set_m68k_reg(0, value);
+                    set_m68k_reg(REG_68K_D0, value);
                     break;
                 case IDC_REG_D1:
-                    set_m68k_reg(1, value);
+                    set_m68k_reg(REG_68K_D1, value);
                     break;
                 case IDC_REG_D2:
-                    set_m68k_reg(2, value);
+                    set_m68k_reg(REG_68K_D2, value);
                     break;
                 case IDC_REG_D3:
-                    set_m68k_reg(3, value);
+                    set_m68k_reg(REG_68K_D3, value);
                     break;
                 case IDC_REG_D4:
-                    set_m68k_reg(4, value);
+                    set_m68k_reg(REG_68K_D4, value);
                     break;
                 case IDC_REG_D5:
-                    set_m68k_reg(5, value);
+                    set_m68k_reg(REG_68K_D5, value);
                     break;
                 case IDC_REG_D6:
-                    set_m68k_reg(6, value);
+                    set_m68k_reg(REG_68K_D6, value);
                     break;
                 case IDC_REG_D7:
-                    set_m68k_reg(7, value);
+                    set_m68k_reg(REG_68K_D7, value);
                     break;
+
                 case IDC_REG_A0:
-                    set_m68k_reg(8, value);
+                    set_m68k_reg(REG_68K_A0, value);
                     break;
                 case IDC_REG_A1:
-                    set_m68k_reg(9, value);
+                    set_m68k_reg(REG_68K_A1, value);
                     break;
                 case IDC_REG_A2:
-                    set_m68k_reg(10, value);
+                    set_m68k_reg(REG_68K_A2, value);
                     break;
                 case IDC_REG_A3:
-                    set_m68k_reg(11, value);
+                    set_m68k_reg(REG_68K_A3, value);
                     break;
                 case IDC_REG_A4:
-                    set_m68k_reg(12, value);
+                    set_m68k_reg(REG_68K_A4, value);
                     break;
                 case IDC_REG_A5:
-                    set_m68k_reg(13, value);
+                    set_m68k_reg(REG_68K_A5, value);
                     break;
                 case IDC_REG_A6:
-                    set_m68k_reg(14, value);
+                    set_m68k_reg(REG_68K_A6, value);
                     break;
                 case IDC_REG_A7:
-                    set_m68k_reg(15, value);
+                    set_m68k_reg(REG_68K_A7, value);
                     break;
+
                 case IDC_REG_PC:
-                    set_m68k_reg(16, value);
-                    break;
-                case IDC_REG_SP:
-                    set_m68k_reg(18, value);
-                    break;
-                case IDC_REG_PPC:
-                    set_m68k_reg(21, value);
+                    set_m68k_reg(REG_68K_PC, value);
                     break;
                 case IDC_REG_SR:
-                    set_m68k_reg(17, value);
+                    set_m68k_reg(REG_68K_SR, value);
+                    break;
+                case IDC_REG_SP:
+                    set_m68k_reg(REG_68K_SP, value);
                     break;
                 }
             }
@@ -1337,8 +1154,6 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
     UpdateWindow(disHwnd);
 
     init_highlighter();
-
-    resize_func();
 
     while (GetMessage(&msg, NULL, 0, 0))
     {
