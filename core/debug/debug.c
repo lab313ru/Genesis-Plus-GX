@@ -634,7 +634,7 @@ void process_breakpoints() {
         dbg_req->dbg_paused = 1;
 
         dbg_req->dbg_events[dbg_req->dbg_events_count].pc = pc;
-        strncpy(dbg_req->dbg_events[dbg_req->dbg_events_count].msg, "genplusgx", sizeof(dbg_req->dbg_events[dbg_req->dbg_events_count].msg));
+        strncpy(dbg_req->dbg_events[dbg_req->dbg_events_count].msg, "gpgx", sizeof(dbg_req->dbg_events[dbg_req->dbg_events_count].msg));
         send_dbg_event(DBG_EVT_STARTED);
     }
 

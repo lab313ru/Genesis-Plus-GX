@@ -26,9 +26,6 @@ static void stop_debugging()
     send_dbg_request(dbg_req, REQ_STOP);
 }
 
-typedef qvector<std::pair<uint32, bool>> codemap_t;
-
-static codemap_t g_codemap;
 eventlist_t g_events;
 static qthread_t events_thread = NULL;
 
@@ -157,45 +154,6 @@ static const char *register_classes[] =
     "Z80 Registers",
     NULL
 };
-
-static void prepare_codemap()
-{
-    g_codemap.resize(MAXROMSIZE);
-    for (size_t i = 0; i < MAXROMSIZE; ++i)
-    {
-        g_codemap[i] = std::pair<uint32, bool>(BADADDR, false);
-    }
-}
-
-static void apply_codemap()
-{
-    if (g_codemap.empty()) return;
-
-    msg("Applying codemap...\n");
-    for (size_t i = 0; i < MAXROMSIZE; ++i)
-    {
-        if (g_codemap[i].second && g_codemap[i].first)
-        {
-            auto_make_code((ea_t)i);
-            plan_ea((ea_t)i);
-        }
-        show_addr((ea_t)i);
-    }
-    plan_range(0, MAXROMSIZE);
-
-    for (size_t i = 0; i < MAXROMSIZE; ++i)
-    {
-        if (g_codemap[i].second && g_codemap[i].first && !get_func((ea_t)i))
-        {
-            if (add_func(i, BADADDR))
-                add_cref(g_codemap[i].first, i, fl_CN);
-            plan_ea((ea_t)i);
-        }
-        show_addr((ea_t)i);
-    }
-    plan_range(0, MAXROMSIZE);
-    msg("Codemap applied.\n");
-}
 
 static void finish_execution()
 {
@@ -371,13 +329,13 @@ static gdecode_t idaapi get_debug_event(debug_event_t *event, int timeout_ms)
 
 static int idaapi continue_after_event(const debug_event_t *event)
 {
-    ui_notification_t req = get_running_request();
+    dbg_notification_t req = get_running_notification();
     switch (event->eid)
     {
     case STEP:
     case BREAKPOINT:
     case PROCESS_SUSPEND:
-        if (req == ui_null)
+        if (req == dbg_null || req == dbg_run_to)
             continue_execution();
     break;
     }

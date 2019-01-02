@@ -9,7 +9,6 @@ extern "C" {
 #define UpdateMSG (WM_USER+0x0001)
 
 void run_gui();
-void update_gui();
 void stop_gui();
 
 extern const COLORREF normal_pal[];

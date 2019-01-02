@@ -29,23 +29,7 @@
 extern debugger_t debugger;
 
 static bool plugin_inited;
-static bool dbg_started;
 static bool my_dbg;
-
-static ssize_t idaapi hook_dbg(void *user_data, int notification_code, va_list va)
-{
-    switch (notification_code)
-    {
-    case dbg_notification_t::dbg_process_start:
-        dbg_started = true;
-        break;
-
-    case dbg_notification_t::dbg_process_exit:
-        dbg_started = false;
-        break;
-    }
-    return 0;
-}
 
 static int idaapi idp_to_dbg_reg(int idp_reg)
 {
@@ -1129,14 +1113,12 @@ static int idaapi init(void)
     {
         dbg = &debugger;
         plugin_inited = true;
-        dbg_started = false;
         my_dbg = false;
 
         bool res = register_action(smd_constant_action);
 
         hook_to_notification_point(HT_UI, hook_ui, NULL);
         hook_to_notification_point(HT_IDP, hook_idp, NULL);
-        hook_to_notification_point(HT_DBG, hook_dbg, NULL);
 
         print_version();
         return PLUGIN_KEEP;
@@ -1152,12 +1134,10 @@ static void idaapi term(void)
     {
         unhook_from_notification_point(HT_UI, hook_ui);
         unhook_from_notification_point(HT_IDP, hook_idp);
-        unhook_from_notification_point(HT_DBG, hook_dbg);
 
         unregister_action(smd_constant_name);
 
         plugin_inited = false;
-        dbg_started = false;
     }
 }
 

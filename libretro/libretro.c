@@ -2587,7 +2587,7 @@ void retro_run(void)
       }
    }
 
-   update_gui();
+   process_request();
 }
 
 #undef  CHUNKSIZE

@@ -166,11 +166,6 @@ void run_gui()
     create_disassembler();
 }
 
-void update_gui()
-{
-    process_request();
-}
-
 void stop_gui()
 {
     destroy_plane_explorer();
