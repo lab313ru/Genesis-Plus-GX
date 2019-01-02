@@ -23,7 +23,7 @@
 #include "gui.h"
 #include "vdp_ram_debug.h"
 
-static HWND VDPRamHWnd = NULL;
+HWND VDPRamHWnd = NULL;
 static HANDLE hThread = NULL;
 
 static int VDPRamPal, VDPRamTile;
@@ -1625,6 +1625,8 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
     ShowWindow(VDPRamHWnd, SW_SHOW);
     UpdateWindow(VDPRamHWnd);
 
+    HANDLE hMutex = CreateMutex(NULL, FALSE, VDP_RAM_MUTEX);
+
     while (GetMessage(&msg, NULL, 0, 0))
     {
         if (!IsDialogMessage(VDPRamHWnd, &msg))
@@ -1633,6 +1635,8 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
             DispatchMessage(&msg);
         }
 	}
+
+    CloseHandle(hMutex);
 
     return 1;
 }

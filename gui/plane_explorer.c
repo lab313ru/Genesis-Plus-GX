@@ -8,7 +8,7 @@
 #include "shared.h"
 #include "vdp_ctrl.h"
 
-static HWND PlaneExplorerHWnd = NULL;
+HWND PlaneExplorerHWnd = NULL;
 static HANDLE hThread = NULL;
 
 /*********** PLANE EXPLORER ******/
@@ -682,6 +682,8 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
     ShowWindow(PlaneExplorerHWnd, SW_SHOW);
     UpdateWindow(PlaneExplorerHWnd);
 
+    HANDLE hMutex = CreateMutex(NULL, FALSE, PLANE_EXPLORER_MUTEX);
+
     while (GetMessage(&msg, NULL, 0, 0))
     {
         if (!IsDialogMessage(PlaneExplorerHWnd, &msg))
@@ -690,6 +692,8 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
             DispatchMessage(&msg);
         }
 	}
+
+    CloseHandle(hMutex);
 
     return 1;
 }

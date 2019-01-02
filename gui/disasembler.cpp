@@ -13,6 +13,9 @@
 
 #include "gui.h"
 #include "disassembler.h"
+#include "plane_explorer.h"
+#include "vdp_ram_debug.h"
+#include "hex_editor.h"
 
 #include "edit_fields.h"
 
@@ -680,9 +683,13 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     {
     case WM_INITDIALOG:
     {
+        SetFocus(hWnd);
+
+        RECT r;
+        GetClientRect(hWnd, &r);
+        AdjustWindowRectEx(&r, GetWindowLong(hWnd, GWL_STYLE), (GetMenu(hWnd) > 0), GetWindowLong(hWnd, GWL_EXSTYLE));
+
         listHwnd = GetDlgItem(hWnd, IDC_DISASM_LIST);
-        
-        SetFocus(listHwnd);
         set_listing_font("Liberation Mono", 9);
 
         CheckDlgButton(hWnd, IDC_EXEC_BPT, BST_CHECKED);
@@ -974,6 +981,48 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         }
         switch (LOWORD(wParam))
         {
+        case ID_TOOLS_PLANEEXPLORER:
+        {
+            HANDLE hMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, PLANE_EXPLORER_MUTEX);
+
+            if (hMutex == NULL)
+            {
+                create_plane_explorer();
+            }
+            else
+            {
+                CloseHandle(hMutex);
+                SetForegroundWindow(PlaneExplorerHWnd);
+            }
+        } break;
+        case ID_TOOLS_VDPRAM:
+        {
+            HANDLE hMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, VDP_RAM_MUTEX);
+
+            if (hMutex == NULL)
+            {
+                create_vdp_ram_debug();
+            }
+            else
+            {
+                CloseHandle(hMutex);
+                SetForegroundWindow(VDPRamHWnd);
+            }
+        } break;
+        case ID_TOOLS_HEXEDITOR:
+        {
+            HANDLE hMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, HEX_EDITOR_MUTEX);
+
+            if (hMutex == NULL)
+            {
+                create_hex_editor();
+            }
+            else
+            {
+                CloseHandle(hMutex);
+                SetForegroundWindow(HexEditorHwnd);
+            }
+        } break;
         case IDC_SR_T:
         case IDC_SR_0E:
         case IDC_SR_S:
@@ -1141,9 +1190,11 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         PostQuitMessage(0);
         EndDialog(hWnd, 0);
     } break;
+    default:
+        return FALSE;
     }
 
-    return DefWindowProc(hWnd, message, wParam, lParam);
+    return TRUE;
 }
 
 static bool openCapstone()
@@ -1163,6 +1214,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
     HACCEL hAccelTable = LoadAccelerators(dbg_wnd_hinst, MAKEINTRESOURCE(ACCELERATOR_RESOURCE_ID));
     MSG msg;
     hRich = LoadLibrary("Riched32.dll");
+    InitCommonControls();
 
     disHwnd = CreateDialog(dbg_wnd_hinst, MAKEINTRESOURCE(IDD_DISASSEMBLER), dbg_window, (DLGPROC)DisasseblerWndProc);
     ShowWindow(disHwnd, SW_SHOW);

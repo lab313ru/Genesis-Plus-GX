@@ -12,6 +12,7 @@
 #define IDD_VDP_REGISTERS_OTHERREGISTERS 107
 #define IDD_DISASM_REGS                 108
 #define ACCELERATOR_RESOURCE_ID         109
+#define IDR_DBG_MENU                    110
 #define ID_CANCEL                       1000
 #define IDC_BPT_LIST                    1001
 #define IDC_STEP_INTO                   1002
@@ -177,6 +178,10 @@
 #define IDC_VDP_REGISTERS_0E13          32077
 #define IDC_VDP_REGISTERS_SCROLLAPATTERNBASE_E 32078
 #define IDC_VDP_REGISTERS_SCROLLBPATTERNBASE_E 32079
+#define ID_TOOLS_VDPRAM                 40001
+#define ID_TOOLS_PLANEEXPLORER          40002
+#define ID_TOOLS_HEXEDITOR              40003
+#define ID_HELP_ABOUT                   40004
 #define IDC_C_HEX_LINES                 42191
 #define IDC_C_HEX_TEXT                  42192
 #define IDC_C_HEX_GOTO                  42193
@@ -220,8 +225,8 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        110
-#define _APS_NEXT_COMMAND_VALUE         40001
+#define _APS_NEXT_RESOURCE_VALUE        111
+#define _APS_NEXT_COMMAND_VALUE         40005
 #define _APS_NEXT_CONTROL_VALUE         1089
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
