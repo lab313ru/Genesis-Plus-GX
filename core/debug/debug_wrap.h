@@ -11,7 +11,10 @@ extern "C" {
 #define SHARED_MEM_NAME "GX_PLUS_SHARED_MEM"
 #define MAX_BREAKPOINTS 1000
 #define MAX_DBG_EVENTS 20
+
+#ifndef MAXROMSIZE
 #define MAXROMSIZE ((unsigned int)0xA00000)
+#endif
 
 #pragma pack(push, 4)
 typedef enum {
@@ -80,10 +83,10 @@ typedef enum {
 } request_type_t;
 
 typedef enum {
-    REG_TYPE_M68K = 1,
-    REG_TYPE_S80,
-    REG_TYPE_Z80,
-    REG_TYPE_VDP,
+    REG_TYPE_M68K = (1 << 0),
+    REG_TYPE_S80 = (1 << 1),
+    REG_TYPE_Z80 = (1 << 2),
+    REG_TYPE_VDP = (1 << 3),
 } register_type_t;
 
 typedef enum {
@@ -109,8 +112,95 @@ typedef struct {
 typedef struct {
     unsigned int d0, d1, d2, d3, d4, d5, d6, d7;
     unsigned int a0, a1, a2, a3, a4, a5, a6, a7;
-    unsigned int pc, sp, ppc, sr;
+    unsigned int pc, sr, sp, usp, isp, ppc, ir;
 } regs_68k_data_t;
+
+typedef enum {
+    REG_68K_D0,
+    REG_68K_D1,
+    REG_68K_D2,
+    REG_68K_D3,
+    REG_68K_D4,
+    REG_68K_D5,
+    REG_68K_D6,
+    REG_68K_D7,
+
+    REG_68K_A0,
+    REG_68K_A1,
+    REG_68K_A2,
+    REG_68K_A3,
+    REG_68K_A4,
+    REG_68K_A5,
+    REG_68K_A6,
+    REG_68K_A7,
+
+    REG_68K_PC,
+    REG_68K_SR,
+    REG_68K_SP,
+    REG_68K_USP,
+    REG_68K_ISP,
+    REG_68K_PPC,
+    REG_68K_IR,
+
+    REG_VDP_00,
+    REG_VDP_01,
+    REG_VDP_02,
+    REG_VDP_03,
+    REG_VDP_04,
+    REG_VDP_05,
+    REG_VDP_06,
+    REG_VDP_07,
+    REG_VDP_08,
+    REG_VDP_09,
+    REG_VDP_0A,
+    REG_VDP_0B,
+    REG_VDP_0C,
+    REG_VDP_0D,
+    REG_VDP_0E,
+    REG_VDP_0F,
+    REG_VDP_10,
+    REG_VDP_11,
+    REG_VDP_12,
+    REG_VDP_13,
+    REG_VDP_14,
+    REG_VDP_15,
+    REG_VDP_16,
+    REG_VDP_17,
+    REG_VDP_18,
+    REG_VDP_19,
+    REG_VDP_1A,
+    REG_VDP_1B,
+    REG_VDP_1C,
+    REG_VDP_1D,
+    REG_VDP_1E,
+    REG_VDP_1F,
+    REG_VDP_DMA_LEN,
+    REG_VDP_DMA_SRC,
+    REG_VDP_DMA_DST,
+
+    REG_Z80_PC,
+    REG_Z80_SP,
+    REG_Z80_AF,
+    REG_Z80_BC,
+    REG_Z80_DE,
+    REG_Z80_HL,
+    REG_Z80_IX,
+    REG_Z80_IY,
+    REG_Z80_WZ,
+
+    REG_Z80_AF2,
+    REG_Z80_BC2,
+    REG_Z80_DE2,
+    REG_Z80_HL2,
+
+    REG_Z80_R,
+    REG_Z80_R2,
+    REG_Z80_IFFI1,
+    REG_Z80_IFFI2,
+    REG_Z80_HALT,
+    REG_Z80_IM,
+    REG_Z80_I,
+} regs_all_t;
 
 typedef struct {
     unsigned int pc, sp, af, bc, de, hl, ix, iy, wz;
@@ -119,14 +209,17 @@ typedef struct {
 } regs_z80_data_t;
 
 typedef struct {
-    register_type_t type;
-    
-    union {
-        regs_68k_data_t values;
-        unsigned int array[20];
-    } regs_68k;
-    reg_val_t any_reg;
     unsigned char regs_vdp[0x20];
+    unsigned short dma_len;
+    unsigned int dma_src, dma_dst;
+} vdp_regs_t;
+
+typedef struct {
+    int type; // register_type_t
+    
+    regs_68k_data_t regs_68k;
+    reg_val_t any_reg;
+    vdp_regs_t vdp_regs;
     regs_z80_data_t regs_z80;
 } register_data_t;
 
@@ -159,7 +252,7 @@ typedef struct {
     int dbg_events_count;
     debugger_event_t dbg_events[MAX_DBG_EVENTS];
     bpt_list_t bpt_list;
-    int dbg_active;
+    int dbg_active, dbg_paused;
     int is_ida;
 } dbg_request_t;
 #pragma pack(pop)

@@ -35,9 +35,9 @@ void close_shared_mem(dbg_request_t **request)
 
 int recv_dbg_event(dbg_request_t *request, int wait)
 {
-    while (1)
+    while (request->dbg_active || request->dbg_events_count)
     {
-        for (int i = 0; i < ((request->dbg_events_count > 0) ? MAX_BREAKPOINTS : 0); ++i)
+        for (int i = 0; i < MAX_DBG_EVENTS; ++i)
         {
             if (request->dbg_events[i].type != DBG_EVT_NO_EVENT)
             {
@@ -50,10 +50,15 @@ int recv_dbg_event(dbg_request_t *request, int wait)
             return -1;
         Sleep(10);
     }
+
+    return -1;
 }
 
 void send_dbg_request(dbg_request_t *request, request_type_t type)
 {
+    if (!request)
+        return;
+
     request->req_type = type;
 
     while (request->dbg_active && request->req_type != REQ_NO_REQUEST)

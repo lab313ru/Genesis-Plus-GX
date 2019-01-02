@@ -107,6 +107,9 @@ extern unsigned int vdp_hvc_r(unsigned int cycles);
 extern void vdp_test_w(unsigned int data);
 extern int vdp_68k_irq_ack(int int_level);
 
+extern int vdp_dma_calc_src();
+extern int vdp_dma_get_dst();
+
 #ifdef __cplusplus
 }
 #endif

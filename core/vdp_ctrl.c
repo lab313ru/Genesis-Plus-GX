@@ -186,7 +186,7 @@ static void (*const dma_func[16])(unsigned int length) =
   vdp_dma_68k_ext,vdp_dma_68k_ext,vdp_dma_68k_ext,vdp_dma_68k_ext,
 
   /* 0x4-0x7 : DMA from 68k bus $800000-$FFFFFF (internal RAM & I/O) */
-  vdp_dma_68k_ram, vdp_dma_68k_io,vdp_dma_68k_ram,vdp_dma_68k_ram,
+  vdp_dma_68k_ram,vdp_dma_68k_io,vdp_dma_68k_ram,vdp_dma_68k_ram,
 
   /* 0x8-0xB : DMA Fill */
   vdp_dma_fill,vdp_dma_fill,vdp_dma_fill,vdp_dma_fill,
@@ -194,6 +194,46 @@ static void (*const dma_func[16])(unsigned int length) =
   /* 0xC-0xF : DMA Copy */
   vdp_dma_copy,vdp_dma_copy,vdp_dma_copy,vdp_dma_copy
 };
+
+static int vdp_dma_68k_normal_src()
+{
+    return (reg[23] << 17) | (dma_src << 1);
+}
+
+static int vdp_dma_fill_src()
+{
+    return 0;
+}
+
+static int vdp_dma_copy_src()
+{
+    return dma_src;
+}
+
+int vdp_dma_get_dst()
+{
+    return addr;
+}
+
+static int (*const dma_func_src[16])() = 
+{
+/* 0x0-0x3 : DMA from 68k bus $000000-$7FFFFF (external area) */
+  vdp_dma_68k_normal_src,vdp_dma_68k_normal_src,vdp_dma_68k_normal_src,vdp_dma_68k_normal_src,
+
+  /* 0x4-0x7 : DMA from 68k bus $800000-$FFFFFF (internal RAM & I/O) */
+  vdp_dma_68k_normal_src,vdp_dma_68k_normal_src,vdp_dma_68k_normal_src,vdp_dma_68k_normal_src,
+
+  /* 0x8-0xB : DMA Fill */
+  vdp_dma_fill_src,vdp_dma_fill_src,vdp_dma_fill_src,vdp_dma_fill_src,
+
+  /* 0xC-0xF : DMA Copy */
+  vdp_dma_copy_src,vdp_dma_copy_src,vdp_dma_copy_src,vdp_dma_copy_src
+};
+
+int vdp_dma_calc_src()
+{
+    return dma_func_src[reg[23] >> 4]();
+}
 
 /* BG rendering functions */
 static void (*const render_bg_modes[16])(int line) =
