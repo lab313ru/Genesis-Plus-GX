@@ -174,8 +174,11 @@ static bool idaapi init_debugger(const char *hostname, int portnum, const char *
 
 static bool idaapi term_debugger(void)
 {
-    dbg_req->is_ida = 0;
-    close_shared_mem(&dbg_req);
+    if (dbg_req)
+    {
+        dbg_req->is_ida = 0;
+        close_shared_mem(&dbg_req);
+    }
     return true;
 }
 
@@ -357,14 +360,14 @@ static int idaapi thread_continue(thid_t tid) // Resume a suspended thread
     return 0;
 }
 
-static int idaapi set_step_mode(thid_t tid, resume_mode_t resmod) // Run one instruction in the thread
+static int idaapi set_step_mode(thid_t tid, resume_mode_t resmod)
 {
     switch (resmod)
     {
-    case RESMOD_INTO:    ///< step into call (the most typical single stepping)
+    case RESMOD_INTO:
         send_dbg_request(dbg_req, REQ_STEP_INTO);
         break;
-    case RESMOD_OVER:    ///< step over call
+    case RESMOD_OVER:
         send_dbg_request(dbg_req, REQ_STEP_OVER);
         break;
     }
