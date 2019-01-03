@@ -1,8 +1,11 @@
 .vs/
+.idea/
 /libretro/libretro_msvc/Debug_*/
 /libretro/libretro_msvc/Release_*/
 /libretro/libretro_msvc/x64/Debug_*/
 /libretro/libretro_msvc/x64/Release_*/
+/cmake-build-debug/
+cmake-build-release/
 psp2/*.o
 psp2/*.elf
 psp2/*.velf

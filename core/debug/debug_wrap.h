@@ -5,9 +5,6 @@
 extern "C" {
 #endif
 
-#include <Windows.h>
-#undef EXCEPTION_ILLEGAL_INSTRUCTION
-
 #define SHARED_MEM_NAME "GX_PLUS_SHARED_MEM"
 #define MAX_BREAKPOINTS 1000
 #define MAX_DBG_EVENTS 20
@@ -210,7 +207,7 @@ typedef struct {
 
 typedef struct {
     unsigned char regs_vdp[0x20];
-    unsigned short dma_len;
+    unsigned int dma_len;
     unsigned int dma_src, dma_dst;
 } vdp_regs_t;
 

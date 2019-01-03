@@ -1,23 +1,38 @@
+#ifdef _WIN32
 #include <Windows.h>
 #include <commctrl.h>
 #include <process.h>
+#else
+#include <unistd.h>
+#include <pthread.h>
+#endif
+
 #include "gui.h"
+
+#ifdef _WIN32
 #include "plane_explorer.h"
 #include "vdp_ram_debug.h"
 #include "hex_editor.h"
 #include "disassembler.h"
+#endif
+
 #include "debug.h"
 
+#ifdef _WIN32
 static HANDLE hThread;
-static int dbg_active = 0;
-
 HWND dbg_window = NULL;
 HINSTANCE dbg_wnd_hinst = NULL;
 
 static ACTCTX actCtx;
 static HANDLE hActCtx;
 static ULONG_PTR cookie;
+#else
+static pthread_t *threadId;
+#endif
 
+static int dbg_active = 0;
+
+#ifdef _WIN32
 HINSTANCE GetHInstance()
 {
     MEMORY_BASIC_INFORMATION mbi;
@@ -66,18 +81,20 @@ const COLORREF normal_pal[] =
     0x000000EE,
     0x000000FF
 };
+#endif
 
 unsigned short cram_9b_to_16b(unsigned short data)
 {
     /* Unpack 9-bit CRAM data (BBBGGGRRR) to 16-bit data (BBB0GGG0RRR0) */
-    return ((data & 0x1C0) << 3) | ((data & 0x038) << 2) | ((data & 0x007) << 1);
+    return (unsigned short)(((data & 0x1C0) << 3) | ((data & 0x038) << 2) | ((data & 0x007) << 1));
 }
 
 unsigned short cram_16b_to_9b(unsigned short data)
 {
-    return ((data & 0xE00) >> 3) | ((data & 0x0E0) >> 2) | ((data & 0x00E) >> 1);
+    return (unsigned short)(((data & 0xE00) >> 3) | ((data & 0x0E0) >> 2) | ((data & 0x00E) >> 1));
 }
 
+#ifdef _WIN32
 int select_file_save(char *Dest, const char *Dir, const char *Titre, const char *Filter, const char *Ext, HWND hwnd)
 {
     OPENFILENAME ofn;
@@ -135,22 +152,35 @@ int select_file_load(char *Dest, const char *Dir, const char *Titre, const char 
 
     return 0;
 }
+#endif
 
 static void update_windows(void *data)
 {
     while (dbg_active)
     {
+#ifdef _WIN32
         update_plane_explorer();
         update_vdp_ram_debug();
         update_hex_editor();
+#endif
+
+#ifdef _WIN32
         Sleep(300);
+#else
+        usleep(300 * 1000);
+#endif
     }
 
+#ifdef _WIN32
     _endthread();
+#else
+    pthread_exit(0);
+#endif
 }
 
 void run_gui()
 {
+#ifdef _WIN32
     dbg_wnd_hinst = GetHInstance();
 
     InitCommonControls();
@@ -159,21 +189,42 @@ void run_gui()
     create_plane_explorer();
     create_vdp_ram_debug();
     create_hex_editor();
+#endif
 
     dbg_active = 1;
-    _beginthread(update_windows, 1024, NULL);
 
+#ifdef _WIN32
+    _beginthread(update_windows, 1024, NULL);
+#else
+    pthread_attr_t attr;
+    if (pthread_attr_init(&attr))
+        return;
+
+    if (pthread_attr_setstacksize(&attr, 1024))
+        return;
+
+    if (pthread_create(threadId, &attr, (void*(*)(void*))update_windows, NULL))
+        return;
+#endif
+
+#ifdef _WIN32
     create_disassembler();
+#endif
 }
 
 void stop_gui()
 {
+#ifdef _WIN32
     destroy_plane_explorer();
     destroy_vdp_ram_debug();
     destroy_hex_editor();
+#endif
 
     dbg_active = 0;
+
+#ifdef _WIN32
     destroy_disassembler();
 
     disable_visual_styles();
+#endif
 }

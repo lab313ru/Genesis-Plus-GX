@@ -4,12 +4,10 @@
 extern "C" {
 #endif
 
+#ifdef _WIN32
 #include <Windows.h>
 
 #define UpdateMSG (WM_USER+0x0001)
-
-void run_gui();
-void stop_gui();
 
 extern const COLORREF normal_pal[];
 unsigned short cram_9b_to_16b(unsigned short data);
@@ -20,6 +18,10 @@ int select_file_load(char *Dest, const char *Dir, const char *Titre, const char 
 
 extern HINSTANCE dbg_wnd_hinst;
 extern HWND dbg_window;
+#endif
+
+void run_gui();
+void stop_gui();
 
 #ifdef __cplusplus
 }

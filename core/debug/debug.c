@@ -1,3 +1,12 @@
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <stddef.h>
+#include <unistd.h>
+#endif
+
 #include "debug.h"
 
 #include "shared.h"
@@ -14,7 +23,7 @@
 #include "m68kops.h"
 
 #include "vdp_ctrl.h"
-#include "Z80.h"
+#include "z80.h"
 
 static int dbg_first_paused, dbg_trace, dbg_dont_check_bp;
 static int dbg_step_over;
@@ -22,7 +31,12 @@ static int dbg_last_pc;
 static unsigned int dbg_step_over_addr;
 
 static dbg_request_t *dbg_req = NULL;
+
+#ifdef _WIN32
 static HANDLE hMapFile = 0;
+#else
+static int shm;
+#endif
 
 typedef struct breakpoint_s {
     struct breakpoint_s *next, *prev;
@@ -180,6 +194,7 @@ static void deactivate_debugger()
 
 int activate_shared_mem()
 {
+#ifdef _WIN32
     hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(dbg_request_t), SHARED_MEM_NAME);
 
     if (hMapFile == 0)
@@ -194,6 +209,20 @@ int activate_shared_mem()
         CloseHandle(hMapFile);
         return -1;
     }
+#else
+    shm = shm_open(SHARED_MEM_NAME, O_CREAT|O_RDWR, 0777);
+
+    if (shm == -1)
+        return -1;
+
+    dbg_req = mmap(NULL, sizeof(dbg_request_t), PROT_READ|PROT_WRITE, MAP_SHARED, shm, 0);
+
+    if (dbg_req == MAP_FAILED) {
+        close(shm);
+        shm_unlink(SHARED_MEM_NAME);
+        return -1;
+    }
+#endif
 
     memset(dbg_req, 0, sizeof(dbg_request_t));
 
@@ -202,9 +231,15 @@ int activate_shared_mem()
 
 void deactivate_shared_mem()
 {
+#ifdef _WIN32
     UnmapViewOfFile(dbg_req);
     CloseHandle(hMapFile);
     hMapFile = NULL;
+#else
+    munmap(dbg_req, sizeof(dbg_request_t));
+    close(shm);
+    shm_unlink(SHARED_MEM_NAME);
+#endif
     dbg_req = NULL;
 }
 
