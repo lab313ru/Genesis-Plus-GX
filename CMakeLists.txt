@@ -25,11 +25,17 @@ add_compile_definitions(
         HAVE_YM3438_CORE
 )
 
-add_definitions("-D INLINE=\"static inline\"")
+if(UNIX)
+    add_definitions("-D INLINE=\"static inline\"")
+else(WIN32)
+    add_definitions("-D INLINE=\"static __inline\"")
+endif()
 
 SET(BASEPATH "${CMAKE_SOURCE_DIR}")
 
-include_directories(gpgx_debugger PRIVATE
+include_directories(gpgx_debugger
+        PRIVATE
+
         ${BASEPATH}/libretro
         ${BASEPATH}/libretro/libretro-common/include
         ${BASEPATH}/core
@@ -47,6 +53,13 @@ include_directories(gpgx_debugger PRIVATE
         ${BASEPATH}/core/z80
         ${BASEPATH}/gui
         )
+
+include_directories(gpgx_debugger
+        PRIVATE
+
+        ${BASEPATH}/gui/capstone)
+
+link_directories(${BASEPATH}/gui/capstone)
 
 add_library(gpgx_debugger
         SHARED
@@ -175,4 +188,23 @@ add_library(gpgx_debugger
         libretro/scrc32.c
         )
 
-target_link_libraries(gpgx_debugger PRIVATE m rt pthread)
+if(WIN32)
+    target_sources(gpgx_debugger
+            PRIVATE
+
+            gui/disasembler.cpp
+            gui/hex_editor.cpp
+            gui/plane_explorer.c
+            gui/vdp_ram_debug.cpp
+            )
+endif()
+
+if(UNIX)
+    target_link_libraries(gpgx_debugger PRIVATE m rt pthread capstone)
+else()
+    if(CMAKE_BUILD_TYPE EQUAL "DEBUG")
+        target_link_libraries(gpgx_debugger PRIVATE capstone_64d)
+    else()
+        target_link_libraries(gpgx_debugger PRIVATE capstone_64)
+    endif()
+endif()

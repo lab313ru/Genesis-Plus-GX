@@ -17,5 +17,4 @@ sdl/build_sdl
 sdl/build_sdl2
 
 *.o
-*.a
 *.aps
