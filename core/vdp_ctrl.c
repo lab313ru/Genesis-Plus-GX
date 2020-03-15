@@ -2868,7 +2868,11 @@ static void vdp_z80_data_w_ms(unsigned int data)
       MARK_BG_DIRTY(index);
     }
 
-    check_breakpoint(BPT_VRAM_W, 2, index, data);
+#ifdef HOOK_CPU
+    if (cpu_hook)
+        cpu_hook(BPT_VRAM_W, 2, index, data);
+#endif
+
 #ifdef LOGVDP
     error("[%d(%d)][%d(%d)] VRAM 0x%.4x write -> 0x%.4x (pc: %.6x)\n", v_counter, (v_counter + (Z80.cycles - mcycles_vdp)/MCYCLES_PER_LINE)%lines_per_frame, Z80.cycles, Z80.cycles%MCYCLES_PER_LINE, index, data, Z80.pc.w.l);
 #endif
@@ -2896,7 +2900,12 @@ static void vdp_z80_data_w_ms(unsigned int data)
         color_update_m4(0x40, data);
       }
     }
-    check_breakpoint(BPT_CRAM_W, 2, addr, data);
+
+#ifdef HOOK_CPU
+    if (cpu_hook)
+        cpu_hook(BPT_CRAM_W, 2, addr, data);
+#endif
+
 #ifdef LOGVDP
     error("[%d(%d)][%d(%d)] CRAM 0x%.2x write -> 0x%.4x (pc: %.6x)\n", v_counter, (v_counter + (Z80.cycles - mcycles_vdp)/MCYCLES_PER_LINE)%lines_per_frame, Z80.cycles, Z80.cycles%MCYCLES_PER_LINE, addr, data, Z80.pc.w.l);
 #endif
@@ -2945,7 +2954,12 @@ static void vdp_z80_data_w_gg(unsigned int data)
       vram[index] = data;
       MARK_BG_DIRTY(index);
     }
-    check_breakpoint(BPT_VRAM_W, 2, index, data);
+
+#ifdef HOOK_CPU
+    if (cpu_hook)
+        cpu_hook(BPT_VRAM_W, 2, index, data);
+#endif
+
 #ifdef LOGVDP
     error("[%d(%d)][%d(%d)] VRAM 0x%.4x write -> 0x%.4x (pc: %.6x)\n", v_counter, (v_counter + (Z80.cycles - mcycles_vdp)/MCYCLES_PER_LINE)%lines_per_frame, Z80.cycles, Z80.cycles%MCYCLES_PER_LINE, index, data, Z80.pc.w.l);
 #endif
@@ -2984,7 +2998,12 @@ static void vdp_z80_data_w_gg(unsigned int data)
       /* Latch LSB */
       cached_write = data;
     }
-    check_breakpoint(BPT_CRAM_W, 2, addr, data);
+
+#ifdef HOOK_CPU
+    if (cpu_hook)
+        cpu_hook(BPT_CRAM_W, 2, addr, data);
+#endif
+
 #ifdef LOGVDP
     error("[%d(%d)][%d(%d)] CRAM 0x%.2x write -> 0x%.4x (pc: %.6x)\n", v_counter, (v_counter + (Z80.cycles - mcycles_vdp)/MCYCLES_PER_LINE)%lines_per_frame, Z80.cycles, Z80.cycles%MCYCLES_PER_LINE, addr, data, Z80.pc.w.l);
 #endif
@@ -3011,7 +3030,11 @@ static void vdp_z80_data_w_sg(unsigned int data)
   /* Update address register */
   addr++;
 
-  check_breakpoint(BPT_VRAM_W, 2, index, data);
+#ifdef HOOK_CPU
+  if (cpu_hook)
+      cpu_hook(BPT_VRAM_W, 2, index, data);
+#endif
+
 #ifdef LOGVDP
   error("[%d(%d)][%d(%d)] VRAM 0x%.4x write -> 0x%.4x (pc: %.6x)\n", v_counter, (v_counter + (Z80.cycles - mcycles_vdp)/MCYCLES_PER_LINE)%lines_per_frame, Z80.cycles, Z80.cycles%MCYCLES_PER_LINE, index, data, Z80.pc.w.l);
 #endif
