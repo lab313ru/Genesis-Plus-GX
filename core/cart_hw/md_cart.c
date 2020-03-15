@@ -2,7 +2,7 @@
  *  Genesis Plus
  *  Mega Drive cartridge hardware support
  *
- *  Copyright (C) 2007-2017  Eke-Eke (Genesis Plus GX)
+ *  Copyright (C) 2007-2019  Eke-Eke (Genesis Plus GX)
  *
  *  Many cartridge protections were initially documented by Haze
  *  (http://haze.mameworld.info/)
@@ -376,17 +376,37 @@ void md_cart_init(void)
   sram_init();
   eeprom_i2c_init();
 
-  /* external SRAM */
+  /* memory-mapped SRAM */
   if (sram.on && !sram.custom)
   {
-    /* initialize default memory mapping for SRAM */
-    m68k.memory_map[sram.start >> 16].base    = sram.sram;
-    m68k.memory_map[sram.start >> 16].read8   = sram_read_byte;
-    m68k.memory_map[sram.start >> 16].read16  = sram_read_word;
-    m68k.memory_map[sram.start >> 16].write8  = sram_write_byte;
-    m68k.memory_map[sram.start >> 16].write16 = sram_write_word;
-    zbank_memory_map[sram.start >> 16].read   = sram_read_byte;
-    zbank_memory_map[sram.start >> 16].write  = sram_write_byte;
+    /* SRAM is mapped by default unless it overlaps with ROM area (Phantasy Star 4, Beyond Oasis/Legend of Thor, World Series Baseball 9x, Duke Nukem 3D,...) */
+    if (sram.start >= cart.romsize)
+    {
+      m68k.memory_map[sram.start >> 16].base    = sram.sram;
+      m68k.memory_map[sram.start >> 16].read8   = sram_read_byte;
+      m68k.memory_map[sram.start >> 16].read16  = sram_read_word;
+      m68k.memory_map[sram.start >> 16].write8  = sram_write_byte;
+      m68k.memory_map[sram.start >> 16].write16 = sram_write_word;
+      zbank_memory_map[sram.start >> 16].read   = sram_read_byte;
+      zbank_memory_map[sram.start >> 16].write  = sram_write_byte;
+    }
+
+    /* support for Triple Play 96 & Triple Play - Gold Edition (available ROM dumps include dumped SRAM data) */
+    else if ((strstr(rominfo.product,"T-172026") != NULL) || (strstr(rominfo.product,"T-172116") != NULL))
+    {
+      /* $000000-$1fffff and $300000-$3fffff: cartridge ROM (2MB + 1MB) */
+      /* $200000-$2fffff: SRAM (32 KB mirrored) */
+      for (i=0x20; i<0x30; i++)
+      {
+        m68k.memory_map[i].base    = sram.sram;
+        m68k.memory_map[i].read8   = sram_read_byte;
+        m68k.memory_map[i].read16  = sram_read_word;
+        m68k.memory_map[i].write8  = sram_write_byte;
+        m68k.memory_map[i].write16 = sram_write_word;
+        zbank_memory_map[i].read   = sram_read_byte;
+        zbank_memory_map[i].write  = sram_write_byte;
+      }
+    }
   }
 
   /**********************************************
@@ -760,9 +780,14 @@ int md_cart_context_save(uint8 *state)
       /* SRAM */
       state[bufferptr++] = 0xff;
     }
+    else if (base == boot_rom)
+    {
+      /* Boot ROM */
+      state[bufferptr++] = 0xfe;
+    }
     else
     {
-      /* ROM */
+      /* Cartridge ROM */
       state[bufferptr++] = ((base - cart.rom) >> 16) & 0xff;
     }
   }
@@ -819,7 +844,7 @@ int md_cart_context_load(uint8 *state)
       }
 
       /* ROM */
-      m68k.memory_map[i].base = cart.rom + (offset << 16);
+      m68k.memory_map[i].base = (offset == 0xfe) ? boot_rom : (cart.rom + (offset << 16));
     }
   }
 
@@ -908,7 +933,7 @@ static void mapper_512k_w(uint32 address, uint32 data)
   uint32 i;
 
   /* 512K ROM paging */
-  uint8 *src = cart.rom + (data << 19);
+  uint8 *src = cart.rom + ((data << 19) & cart.mask);
 
   /* cartridge area ($000000-$3FFFFF) is divided into 8 x 512K banks */
   address = (address << 2) & 0x38;

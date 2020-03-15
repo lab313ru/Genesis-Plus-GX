@@ -610,9 +610,6 @@ void sms_cart_reset(void)
     }
   }
 
-  /* reset Memory Control register (RAM & I/O are enabled, either BIOS or Cartridge ROM are enabled) */
-  io_reg[0x0E] = bios_rom.pages ? 0xE0 : 0xA8;
-
   /* reset Z80 memory map */
   mapper_reset();
 
@@ -743,14 +740,96 @@ int sms_cart_region_detect(void)
 int sms_cart_context_save(uint8 *state)
 {
   int bufferptr = 0;
-  save_param(slot.fcr, 4);
+
+  /* check if cartridge ROM is disabled */
+  if (io_reg[0x0E] & 0x40)
+  {
+    /* save Boot ROM mapper settings */
+    save_param(bios_rom.fcr, 4);
+  }
+  else
+  {
+    /* save cartridge mapper settings */
+    save_param(cart_rom.fcr, 4);
+  }
+
+  /* support for SG-1000 games with extra RAM */
+  if ((cart_rom.mapper == MAPPER_RAM_8K) || (cart_rom.mapper == MAPPER_RAM_8K_EXT1))
+  {
+    /* 8KB extra RAM */
+    save_param(work_ram + 0x2000, 0x2000);
+  }
+  else if (cart_rom.mapper == MAPPER_RAM_2K)
+  {
+    /* 2KB extra RAM */
+    save_param(work_ram + 0x2000, 0x800);
+  }
+
   return bufferptr;
 }
 
 int sms_cart_context_load(uint8 *state)
 {
   int bufferptr = 0;
-  load_param(slot.fcr, 4);
+
+  /* check if cartridge ROM is disabled */
+  if (io_reg[0x0E] & 0x40)
+  {
+    /* load Boot ROM mapper settings */
+    load_param(bios_rom.fcr, 4);
+
+    /* set default cartridge ROM paging */
+    switch (cart_rom.mapper)
+    {
+      case MAPPER_SEGA:
+      case MAPPER_SEGA_X:
+        cart_rom.fcr[0] = 0;
+        cart_rom.fcr[1] = 0;
+        cart_rom.fcr[2] = 1;
+        cart_rom.fcr[3] = 2;
+        break;
+
+      case MAPPER_KOREA_8K:
+      case MAPPER_MSX:
+      case MAPPER_MSX_NEMESIS:
+        cart_rom.fcr[0] = 0;
+        cart_rom.fcr[1] = 0;
+        cart_rom.fcr[2] = 0;
+        cart_rom.fcr[3] = 0;
+        break;
+
+      default:
+        cart_rom.fcr[0] = 0;
+        cart_rom.fcr[1] = 0;
+        cart_rom.fcr[2] = 1;
+        cart_rom.fcr[3] = 0;
+        break;
+    }
+  }
+  else
+  {
+    /* load cartridge mapper settings */
+    load_param(cart_rom.fcr, 4);
+
+    /* set default BIOS ROM paging (SEGA mapper by default) */
+    bios_rom.fcr[0] = 0;
+    bios_rom.fcr[1] = 0;
+    bios_rom.fcr[2] = 1;
+    bios_rom.fcr[3] = 2;
+  }
+
+  /* support for SG-1000 games with extra RAM */
+  if ((cart_rom.mapper == MAPPER_RAM_8K) || (cart_rom.mapper == MAPPER_RAM_8K_EXT1))
+  {
+    /* 8KB extra RAM */
+    load_param(work_ram + 0x2000, 0x2000);
+  }
+  else if (cart_rom.mapper == MAPPER_RAM_2K)
+  {
+    /* 2KB extra RAM */
+    load_param(work_ram + 0x2000, 0x800);
+  }
+
   return bufferptr;
 }
 

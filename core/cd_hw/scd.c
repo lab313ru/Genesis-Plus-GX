@@ -101,13 +101,8 @@ void prg_ram_dma_w(unsigned int words)
   /* DMA transfer */
   while (words--)
   {
-    /* read 16-bit word from CDC buffer */
-    data = *(uint16 *)(cdc.ram + src_index);
-
-#ifdef LSB_FIRST
-    /* source data is stored in big endian format */
-    data = ((data >> 8) | (data << 8)) & 0xffff;
-#endif
+    /* read 16-bit word from CDC RAM buffer (big-endian format) */
+    data = READ_WORD(cdc.ram, src_index);
 
     /* write 16-bit word to PRG-RAM */
     *(uint16 *)(scd.prg_ram + dst_index) = data ;
@@ -445,10 +440,16 @@ static void s68k_poll_sync(unsigned int reg_mask)
   /* relative MAIN-CPU cycle counter */
   unsigned int cycles = (s68k.cycles * MCYCLES_PER_LINE) / SCYCLES_PER_LINE;
 
-  /* sync MAIN-CPU with SUB-CPU */
   if (!m68k.stopped)
   {
+    /* save current MAIN-CPU end cycle count (recursive execution is possible) */
+    int end_cycle = m68k.cycle_end;
+
+    /* sync MAIN-CPU with SUB-CPU */
     m68k_run(cycles);
+
+    /* restore MAIN-CPU end cycle count */
+    m68k.cycle_end = end_cycle;
   }
 
   /* MAIN-CPU idle on register polling ? */
@@ -669,8 +670,14 @@ static unsigned int scd_read_word(unsigned int address)
       /* relative MAIN-CPU cycle counter */
       unsigned int cycles = (s68k.cycles * MCYCLES_PER_LINE) / SCYCLES_PER_LINE;
 
+      /* save current MAIN-CPU end cycle count (recursive execution is possible) */
+      int end_cycle = m68k.cycle_end;
+
       /* sync MAIN-CPU with SUB-CPU (Mighty Morphin Power Rangers) */
       m68k_run(cycles);
+
+      /* restore MAIN-CPU end cycle count */
+      m68k.cycle_end = end_cycle;
     }
 
     s68k_poll_detect(3 << (address & 0x1e));
@@ -781,7 +788,7 @@ static void scd_write_byte(unsigned int address, unsigned int data)
 
     case 0x01: /* RESET status */
     {
-      /* RESET bit cleared ? */      
+      /* RESET bit cleared ? */
       if (!(data & 0x01))
       {
         /* reset CD hardware */
@@ -1059,7 +1066,7 @@ static void scd_write_word(unsigned int address, unsigned int data)
       /* only update LED status (register $00 is reserved for MAIN-CPU, use $06 instead) */
       scd.regs[0x06>>1].byte.h = data >> 8;
 
-      /* RESET bit cleared ? */      
+      /* RESET bit cleared ? */
       if (!(data & 0x01))
       {
         /* reset CD hardware */
@@ -1614,6 +1621,9 @@ void scd_reset(int hard)
     s68k.cycles = 0;
     s68k_pulse_reset();
     s68k_pulse_halt();
+
+    /* Reset frame cycle counter */
+    scd.cycles = 0;
   }
   else
   {
@@ -1637,10 +1647,7 @@ void scd_reset(int hard)
 
   /* Reset Timer & Stopwatch counters */
   scd.timer = 0;
-  scd.stopwatch = 0;
-
-  /* Reset frame cycle counter */
-  scd.cycles = 0;
+  scd.stopwatch = s68k.cycles;
 
   /* Clear pending interrupts */
   scd.pending = 0;
@@ -1648,6 +1655,9 @@ void scd_reset(int hard)
   /* Clear CPU polling detection */
   memset(&m68k.poll, 0, sizeof(m68k.poll));
   memset(&s68k.poll, 0, sizeof(s68k.poll));
+
+  /* reset CDD cycle counter */
+  cdd.cycles = (scd.cycles - s68k.cycles) * 3;
 
   /* Reset CD hardware */
   cdd_reset();

@@ -3,7 +3,6 @@
 /* ======================================================================== */
 
 extern int vdp_68k_irq_ack(int int_level);
-extern void process_breakpoints();
 
 #define m68ki_cpu m68k
 #define MUL (7)
@@ -68,13 +67,6 @@ static int default_tas_instr_callback(void)
 #if M68K_EMULATE_FC == OPT_ON
 /* Called every time there's bus activity (read/write to/from memory */
 static void default_set_fc_callback(unsigned int new_fc)
-{
-}
-#endif
-
-#if M68K_INSTRUCTION_HOOK == OPT_ON
-/* Called every instruction cycle prior to execution */
-static void default_instr_hook_callback(void)
 {
 }
 #endif
@@ -191,13 +183,6 @@ void m68k_set_tas_instr_callback(int  (*callback)(void))
 }
 #endif
 
-#if M68K_INSTRUCTION_HOOK == OPT_ON
-void m68k_set_instr_hook_callback(void(*callback)(void))
-{
-  CALLBACK_INSTR_HOOK = callback ? callback : default_instr_hook_callback;
-}
-#endif
-
 #if M68K_EMULATE_FC == OPT_ON
 void m68k_set_fc_callback(void  (*callback)(unsigned int new_fc))
 {
@@ -252,8 +237,6 @@ void m68k_set_irq_delay(unsigned int int_level)
       irq_latency = 1;
       m68ki_trace_t1() /* auto-disable (see m68kcpu.h) */
       m68ki_use_data_space() /* auto-disable (see m68kcpu.h) */
-      m68ki_instr_hook(); /* auto-disable (see m68kcpu.h) */
-      REG_PPC = REG_PC;
       REG_IR = m68ki_read_imm_16();
       m68ki_instruction_jump_table[REG_IR]();
       m68ki_exception_if_trace() /* auto-disable (see m68kcpu.h) */
@@ -308,11 +291,11 @@ void m68k_run(unsigned int cycles)
     /* Set the address space for reads */
     m68ki_use_data_space() /* auto-disable (see m68kcpu.h) */
 
-    /* Call external hook to peek at CPU */
-    m68ki_instr_hook(); /* auto-disable (see m68kcpu.h) */
-
-    /* Record previous program counter */
-    REG_PPC = REG_PC;
+#ifdef HOOK_CPU
+    /* Trigger execution hook */
+    if (cpu_hook)
+      cpu_hook(HOOK_M68K_E, 0, REG_PC, 0);
+#endif
 
     /* Decode next instruction */
     REG_IR = m68ki_read_imm_16();
@@ -359,9 +342,6 @@ void m68k_init(void)
 #endif
 #if M68K_EMULATE_FC == OPT_ON
   m68k_set_fc_callback(NULL);
-#endif
-#if M68K_INSTRUCTION_HOOK == OPT_ON
-  m68k_set_instr_hook_callback(NULL);
 #endif
 }
 
