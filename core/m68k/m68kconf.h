@@ -51,12 +51,6 @@
 #define M68K_EMULATE_FC             OPT_OFF
 #define M68K_SET_FC_CALLBACK(A)     your_set_fc_handler_function(A)
 
- /* If ON, CPU will call the instruction hook callback before every
- * instruction.
- */
-#define M68K_INSTRUCTION_HOOK       OPT_SPECIFY_HANDLER
-#define M68K_INSTRUCTION_CALLBACK() process_breakpoints()
-
 /* If ON, the CPU will monitor the trace flags and take trace exceptions
  */
 #define M68K_EMULATE_TRACE          OPT_OFF

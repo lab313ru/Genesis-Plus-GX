@@ -182,10 +182,6 @@ static drc_t idaapi term_debugger(void)
     return DRC_OK;
 }
 
-static drc_t get_processes(procinfo_vec_t* procs, qstring* errbuf = NULL) {
-    return DRC_OK;
-}
-
 static int idaapi check_debugger_events(void *ud)
 {
     while (dbg_req->dbg_active || dbg_req->dbg_events_count)
@@ -204,7 +200,7 @@ static int idaapi check_debugger_events(void *ud)
         debug_event_t ev;
         switch (dbg_event->type)
         {
-        case dbg_event_type_t::DBG_EVT_STARTED:
+        case dbg_event_type_t::DBG_EVT_STARTED: {
             ev.pid = 1;
             ev.tid = 1;
             ev.ea = BADADDR;
@@ -216,16 +212,16 @@ static int idaapi check_debugger_events(void *ud)
             ev.set_modinfo(PROCESS_STARTED).rebase_to = BADADDR;
 
             g_events.enqueue(ev, IN_FRONT);
-            break;
-        case dbg_event_type_t::DBG_EVT_PAUSED:
+        } break;
+        case dbg_event_type_t::DBG_EVT_PAUSED: {
             ev.pid = 1;
             ev.tid = 1;
             ev.ea = dbg_event->pc;
             ev.handled = true;
             ev.set_eid(PROCESS_SUSPENDED);
             g_events.enqueue(ev, IN_BACK);
-            break;
-        case dbg_event_type_t::DBG_EVT_BREAK:
+        } break;
+        case dbg_event_type_t::DBG_EVT_BREAK: {
             ev.pid = 1;
             ev.tid = 1;
             ev.ea = dbg_event->pc;
@@ -233,22 +229,22 @@ static int idaapi check_debugger_events(void *ud)
             ev.set_eid(BREAKPOINT);
             ev.set_bpt().hea = ev.set_bpt().kea = ev.ea;
             g_events.enqueue(ev, IN_BACK);
-            break;
-        case dbg_event_type_t::DBG_EVT_STEP:
+        } break;
+        case dbg_event_type_t::DBG_EVT_STEP: {
             ev.pid = 1;
             ev.tid = 1;
             ev.ea = dbg_event->pc;
             ev.handled = true;
             ev.set_eid(STEP);
             g_events.enqueue(ev, IN_BACK);
-            break;
-        case dbg_event_type_t::DBG_EVT_STOPPED:
+        } break;
+        case dbg_event_type_t::DBG_EVT_STOPPED: {
             ev.pid = 1;
             ev.handled = true;
             ev.set_exit_code(PROCESS_EXITED, 0);
 
             g_events.enqueue(ev, IN_BACK);
-            break;
+        } break;
         default:
             break;
         }
@@ -624,6 +620,15 @@ static drc_t idaapi update_bpts(int* nbpts, update_bpt_info_t *bpts, int nadd, i
     return DRC_OK;
 }
 
+static drc_t s_get_processes(procinfo_vec_t* procs, qstring* errbuf) {
+    process_info_t info;
+    info.name.sprnt("gpgx");
+    info.pid = 1;
+    procs->add(info);
+
+    return DRC_OK;
+}
+
 static ssize_t idaapi idd_notify(void* , int msgid, va_list va) {
     drc_t retcode = DRC_NONE;
     qstring* errbuf;
@@ -646,13 +651,13 @@ static ssize_t idaapi idd_notify(void* , int msgid, va_list va) {
         retcode = term_debugger();
         break;
 
-    //case debugger_t::ev_get_processes:
-    //{
-    //    procinfo_vec_t* procs = va_arg(va, procinfo_vec_t*);
-    //    errbuf = va_arg(va, qstring*);
-    //    retcode = g_dbgmod.dbg_get_processes(procs, errbuf);
-    //}
-    //break;
+    case debugger_t::ev_get_processes:
+    {
+        procinfo_vec_t* procs = va_arg(va, procinfo_vec_t*);
+        errbuf = va_arg(va, qstring*);
+        retcode = s_get_processes(procs, errbuf);
+    }
+    break;
 
     case debugger_t::ev_start_process:
     {
@@ -907,8 +912,8 @@ debugger_t debugger =
     "GXIDA",
     0x8000 + 1,
     "m68k",
-    DBG_FLAG_NOHOST | DBG_FLAG_CAN_CONT_BPT | DBG_FLAG_FAKE_ATTACH | DBG_FLAG_SAFE | DBG_FLAG_NOPASSWORD | DBG_FLAG_NOSTARTDIR | DBG_FLAG_CONNSTRING | DBG_FLAG_ANYSIZE_HWBPT | DBG_FLAG_DEBTHREAD,
-    DBG_HAS_REQUEST_PAUSE | DBG_HAS_SET_RESUME_MODE | DBG_HAS_CHECK_BPT,
+    DBG_FLAG_NOHOST | DBG_FLAG_CAN_CONT_BPT | DBG_FLAG_FAKE_ATTACH | DBG_FLAG_SAFE | DBG_FLAG_NOPASSWORD | DBG_FLAG_NOSTARTDIR | DBG_FLAG_NOPARAMETERS | DBG_FLAG_ANYSIZE_HWBPT | DBG_FLAG_DEBTHREAD | DBG_FLAG_PREFER_SWBPTS,
+    DBG_HAS_GET_PROCESSES | DBG_HAS_REQUEST_PAUSE | DBG_HAS_SET_RESUME_MODE | DBG_HAS_CHECK_BPT,
 
     register_classes,
     RC_GENERAL,

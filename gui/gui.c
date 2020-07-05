@@ -192,7 +192,7 @@ void run_gui()
     create_hex_editor();
 #endif
 
-    set_cpu_hook(check_breakpoint);
+    set_cpu_hook(process_breakpoints);
     dbg_active = 1;
 
 #ifdef _WIN32
