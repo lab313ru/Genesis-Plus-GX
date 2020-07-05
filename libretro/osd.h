@@ -91,7 +91,7 @@ typedef struct
   uint8 padtype;
 } t_input_config;
 
-typedef struct 
+typedef struct
 {
   char version[16];
   uint8 hq_fm;
@@ -133,9 +133,9 @@ typedef struct
   uint8 gun_cursor;
   uint32 overclock;
   uint8 no_sprite_limit;
-} config_t;
+} t_config;
 
-extern config_t config;
+extern t_config config;
 
 extern char GG_ROM[256];
 extern char AR_ROM[256];
