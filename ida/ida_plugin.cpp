@@ -349,7 +349,6 @@ static ssize_t idaapi hook_idp(void *user_data, int notification_code, va_list v
 
         if (insn->itype == M68K_linea || insn->itype == M68K_linef)
         {
-            uint32 canon = insn->get_canon_feature();
             insn->add_cref(insn->Op1.addr, 0, fl_CN);
             insn->add_cref(insn->ea + insn->size, insn->Op1.offb, fl_F);
             return 1;
@@ -438,7 +437,7 @@ static ssize_t idaapi hook_idp(void *user_data, int notification_code, va_list v
             case o_reg:
             {
                 int reg_idx = idp_to_dbg_reg(op.reg);
-                regval_t reg = getreg(dbg->registers(reg_idx).name, regvalues);
+                regval_t reg = getreg(dbg->regs(reg_idx).name, regvalues);
 
                 if (op.phrase >= 0x10 && op.phrase <= 0x1F || // (A0)..(A7), (A0)+..(A7)+
                     op.phrase >= 0x20 && op.phrase <= 0x27) // -(A0)..-(A7)
@@ -447,26 +446,27 @@ static ssize_t idaapi hook_idp(void *user_data, int notification_code, va_list v
                         reg.ival -= size;
 
                     opinf->ea = (ea_t)reg.ival;
+                    size_t read_size = 0;
 
                     switch (size)
                     {
                     case 1:
                     {
                         uint8_t b = 0;
-                        dbg->read_memory((ea_t)reg.ival, &b, 1);
+                        dbg->read_memory(&read_size, (ea_t)reg.ival, &b, 1);
                         opinf->value.ival = b;
                     } break;
                     case 2:
                     {
                         uint16_t w = 0;
-                        dbg->read_memory((ea_t)reg.ival, &w, 2);
+                        dbg->read_memory(&read_size, (ea_t)reg.ival, &w, 2);
                         w = swap16(w);
                         opinf->value.ival = w;
                     } break;
                     default:
                     {
                         uint32_t l = 0;
-                        dbg->read_memory((ea_t)reg.ival, &l, 4);
+                        dbg->read_memory(&read_size, (ea_t)reg.ival, &l, 4);
                         l = swap32(l);
                         opinf->value.ival = l;
                     } break;
@@ -487,7 +487,7 @@ static ssize_t idaapi hook_idp(void *user_data, int notification_code, va_list v
                 add_reg.ival = 0;
                 if (op.specflag2 & 0x10)
                 {
-                    add_reg = getreg(dbg->registers(add_reg_idx).name, regvalues);
+                    add_reg = getreg(dbg->regs(add_reg_idx).name, regvalues);
                     if (op.specflag1 & 0x10)
                     {
                         add_reg.ival &= 0xFFFF;
@@ -496,30 +496,31 @@ static ssize_t idaapi hook_idp(void *user_data, int notification_code, va_list v
                 }
 
                 if (main_reg_idx != 16)
-                    main_reg = getreg(dbg->registers(main_reg_idx).name, regvalues);
+                    main_reg = getreg(dbg->regs(main_reg_idx).name, regvalues);
 
                 ea_t addr = (ea_t)main_reg.ival + op.addr + (ea_t)add_reg.ival;
                 opinf->ea = addr;
+                size_t read_size = 0;
 
                 switch (size)
                 {
                 case 1:
                 {
                     uint8_t b = 0;
-                    dbg->read_memory(addr, &b, 1);
+                    dbg->read_memory(&read_size, addr, &b, 1);
                     opinf->value.ival = b;
                 } break;
                 case 2:
                 {
                     uint16_t w = 0;
-                    dbg->read_memory(addr, &w, 2);
+                    dbg->read_memory(&read_size, addr, &w, 2);
                     w = swap16(w);
                     opinf->value.ival = w;
                 } break;
                 default:
                 {
                     uint32_t l = 0;
-                    dbg->read_memory(addr, &l, 4);
+                    dbg->read_memory(&read_size, addr, &l, 4);
                     l = swap32(l);
                     opinf->value.ival = l;
                 } break;
@@ -1107,7 +1108,7 @@ static ssize_t idaapi hook_ui(void *user_data, int notification_code, va_list va
 
 //--------------------------------------------------------------------------
 // Initialize debugger plugin
-static int idaapi init(void)
+static plugmod_t * idaapi init(void)
 {
     if (init_plugin())
     {

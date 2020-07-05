@@ -13,17 +13,17 @@ static dbg_request_t *dbg_req = NULL;
 
 static void pause_execution()
 {
-    send_dbg_request(dbg_req, REQ_PAUSE);
+    send_dbg_request(dbg_req, request_type_t::REQ_PAUSE);
 }
 
 static void continue_execution()
 {
-    send_dbg_request(dbg_req, REQ_RESUME);
+    send_dbg_request(dbg_req, request_type_t::REQ_RESUME);
 }
 
 static void stop_debugging()
 {
-    send_dbg_request(dbg_req, REQ_STOP);
+    send_dbg_request(dbg_req, request_type_t::REQ_STOP);
 }
 
 eventlist_t g_events;
@@ -166,25 +166,24 @@ static void finish_execution()
     }
 }
 
-static bool idaapi init_debugger(const char *hostname, int portnum, const char *password)
+static drc_t idaapi init_debugger(const char* hostname, int portnum, const char* password, qstring *errbuf)
 {
     set_processor_type(ph.psnames[0], SETPROC_LOADER); // reset proc to "M68000"
-    return true;
+    return DRC_OK;
 }
 
-static bool idaapi term_debugger(void)
+static drc_t idaapi term_debugger(void)
 {
     if (dbg_req)
     {
         dbg_req->is_ida = 0;
         close_shared_mem(&dbg_req);
     }
-    return true;
+    return DRC_OK;
 }
 
-static int idaapi process_get_info(procinfo_vec_t *procs)
-{
-    return 0;
+static drc_t get_processes(procinfo_vec_t* procs, qstring* errbuf = NULL) {
+    return DRC_OK;
 }
 
 static int idaapi check_debugger_events(void *ud)
@@ -205,54 +204,48 @@ static int idaapi check_debugger_events(void *ud)
         debug_event_t ev;
         switch (dbg_event->type)
         {
-        case DBG_EVT_STARTED:
-            ev.eid = PROCESS_START;
+        case dbg_event_type_t::DBG_EVT_STARTED:
             ev.pid = 1;
             ev.tid = 1;
             ev.ea = BADADDR;
             ev.handled = true;
 
-            ev.modinfo.name[0] = 'G';
-            ev.modinfo.name[1] = 'P';
-            ev.modinfo.name[2] = 'G';
-            ev.modinfo.name[3] = 'X';
-            ev.modinfo.name[4] = '\0';
-            ev.modinfo.base = 0;
-            ev.modinfo.size = 0;
-            ev.modinfo.rebase_to = BADADDR;
+            ev.set_modinfo(PROCESS_STARTED).name.sprnt("GPGX");
+            ev.set_modinfo(PROCESS_STARTED).base = 0;
+            ev.set_modinfo(PROCESS_STARTED).size = 0;
+            ev.set_modinfo(PROCESS_STARTED).rebase_to = BADADDR;
 
             g_events.enqueue(ev, IN_FRONT);
             break;
-        case DBG_EVT_PAUSED:
+        case dbg_event_type_t::DBG_EVT_PAUSED:
             ev.pid = 1;
             ev.tid = 1;
             ev.ea = dbg_event->pc;
             ev.handled = true;
-            ev.eid = PROCESS_SUSPEND;
+            ev.set_eid(PROCESS_SUSPENDED);
             g_events.enqueue(ev, IN_BACK);
             break;
-        case DBG_EVT_BREAK:
+        case dbg_event_type_t::DBG_EVT_BREAK:
             ev.pid = 1;
             ev.tid = 1;
             ev.ea = dbg_event->pc;
             ev.handled = true;
-            ev.eid = BREAKPOINT;
-            ev.bpt.hea = ev.bpt.kea = ev.ea;
+            ev.set_eid(BREAKPOINT);
+            ev.set_bpt().hea = ev.set_bpt().kea = ev.ea;
             g_events.enqueue(ev, IN_BACK);
             break;
-        case DBG_EVT_STEP:
+        case dbg_event_type_t::DBG_EVT_STEP:
             ev.pid = 1;
             ev.tid = 1;
             ev.ea = dbg_event->pc;
             ev.handled = true;
-            ev.eid = STEP;
+            ev.set_eid(STEP);
             g_events.enqueue(ev, IN_BACK);
             break;
-        case DBG_EVT_STOPPED:
-            ev.eid = PROCESS_EXIT;
+        case dbg_event_type_t::DBG_EVT_STOPPED:
             ev.pid = 1;
             ev.handled = true;
-            ev.exit_code = 0;
+            ev.set_exit_code(PROCESS_EXITED, 0);
 
             g_events.enqueue(ev, IN_BACK);
             break;
@@ -260,19 +253,20 @@ static int idaapi check_debugger_events(void *ud)
             break;
         }
 
-        dbg_event->type = DBG_EVT_NO_EVENT;
+        dbg_event->type = dbg_event_type_t::DBG_EVT_NO_EVENT;
         qsleep(10);
     }
 
     return 0;
 }
 
-static int idaapi start_process(const char *path,
+static drc_t idaapi s_start_process(const char *path,
     const char *args,
     const char *startdir,
-    int dbg_proc_flags,
+    uint32 dbg_proc_flags,
     const char *input_path,
-    uint32 input_file_crc32)
+    uint32 input_file_crc32,
+    qstring* errbuf = NULL)
 {
     g_events.clear();
 
@@ -292,27 +286,23 @@ static int idaapi start_process(const char *path,
 
     events_thread = qthread_create(check_debugger_events, NULL);
 
-    send_dbg_request(dbg_req, REQ_ATTACH);
+    send_dbg_request(dbg_req, request_type_t::REQ_ATTACH);
 
-    return 1;
+    return DRC_OK;
 }
 
-static void idaapi rebase_if_required_to(ea_t new_base)
-{
-}
-
-static int idaapi prepare_to_pause_process(void)
+static drc_t idaapi prepare_to_pause_process(qstring *errbuf)
 {
     pause_execution();
-    return 1;
+    return DRC_OK;
 }
 
-static int idaapi emul_exit_process(void)
+static drc_t idaapi emul_exit_process(qstring *errbuf)
 {
     stop_debugging();
     finish_execution();
 
-    return 1;
+    return DRC_OK;
 }
 
 static gdecode_t idaapi get_debug_event(debug_event_t *event, int timeout_ms)
@@ -330,126 +320,112 @@ static gdecode_t idaapi get_debug_event(debug_event_t *event, int timeout_ms)
     return GDE_NO_EVENT;
 }
 
-static int idaapi continue_after_event(const debug_event_t *event)
+static drc_t idaapi continue_after_event(const debug_event_t *event)
 {
     dbg_notification_t req = get_running_notification();
-    switch (event->eid)
+    switch (event->eid())
     {
     case STEP:
     case BREAKPOINT:
-    case PROCESS_SUSPEND:
+    case PROCESS_SUSPENDED:
         if (req == dbg_null || req == dbg_run_to)
             continue_execution();
     break;
     }
 
-    return 1;
+    return DRC_OK;
 }
 
-static void idaapi stopped_at_debug_event(bool dlls_added)
-{
-}
-
-static int idaapi thread_suspend(thid_t tid) // Suspend a running thread
-{
-    return 0;
-}
-
-static int idaapi thread_continue(thid_t tid) // Resume a suspended thread
-{
-    return 0;
-}
-
-static int idaapi set_step_mode(thid_t tid, resume_mode_t resmod)
+static drc_t idaapi s_set_resume_mode(thid_t tid, resume_mode_t resmod)
 {
     switch (resmod)
     {
     case RESMOD_INTO:
-        send_dbg_request(dbg_req, REQ_STEP_INTO);
+        send_dbg_request(dbg_req, request_type_t::REQ_STEP_INTO);
         break;
     case RESMOD_OVER:
-        send_dbg_request(dbg_req, REQ_STEP_OVER);
+        send_dbg_request(dbg_req, request_type_t::REQ_STEP_OVER);
         break;
     }
 
-    return 1;
+    return DRC_OK;
 }
 
-static int idaapi read_registers(thid_t tid, int clsmask, regval_t *values)
+static drc_t idaapi read_registers(thid_t tid, int clsmask, regval_t *values, qstring *errbuf)
 {
     if (!dbg_req)
-        return 0;
+        return DRC_FAILED;
 
     if (clsmask & RC_GENERAL)
     {
-        dbg_req->regs_data.type = REG_TYPE_M68K;
-        send_dbg_request(dbg_req, REQ_GET_REGS);
+        dbg_req->regs_data.type = register_type_t::REG_TYPE_M68K;
+        send_dbg_request(dbg_req, request_type_t::REQ_GET_REGS);
 
         regs_68k_data_t *reg_vals = &dbg_req->regs_data.regs_68k;
 
-        values[REG_68K_D0].ival = reg_vals->d0;
-        values[REG_68K_D1].ival = reg_vals->d1;
-        values[REG_68K_D2].ival = reg_vals->d2;
-        values[REG_68K_D3].ival = reg_vals->d3;
-        values[REG_68K_D4].ival = reg_vals->d4;
-        values[REG_68K_D5].ival = reg_vals->d5;
-        values[REG_68K_D6].ival = reg_vals->d6;
-        values[REG_68K_D7].ival = reg_vals->d7;
+        values[(int)regs_all_t::REG_68K_D0].ival = reg_vals->d0;
+        values[(int)regs_all_t::REG_68K_D1].ival = reg_vals->d1;
+        values[(int)regs_all_t::REG_68K_D2].ival = reg_vals->d2;
+        values[(int)regs_all_t::REG_68K_D3].ival = reg_vals->d3;
+        values[(int)regs_all_t::REG_68K_D4].ival = reg_vals->d4;
+        values[(int)regs_all_t::REG_68K_D5].ival = reg_vals->d5;
+        values[(int)regs_all_t::REG_68K_D6].ival = reg_vals->d6;
+        values[(int)regs_all_t::REG_68K_D7].ival = reg_vals->d7;
 
-		values[REG_68K_A0].ival = reg_vals->a0;
-		values[REG_68K_A1].ival = reg_vals->a1;
-		values[REG_68K_A2].ival = reg_vals->a2;
-		values[REG_68K_A3].ival = reg_vals->a3;
-		values[REG_68K_A4].ival = reg_vals->a4;
-		values[REG_68K_A5].ival = reg_vals->a5;
-		values[REG_68K_A6].ival = reg_vals->a6;
-		values[REG_68K_A7].ival = reg_vals->a7;
+		values[(int)regs_all_t::REG_68K_A0].ival = reg_vals->a0;
+		values[(int)regs_all_t::REG_68K_A1].ival = reg_vals->a1;
+		values[(int)regs_all_t::REG_68K_A2].ival = reg_vals->a2;
+		values[(int)regs_all_t::REG_68K_A3].ival = reg_vals->a3;
+		values[(int)regs_all_t::REG_68K_A4].ival = reg_vals->a4;
+		values[(int)regs_all_t::REG_68K_A5].ival = reg_vals->a5;
+		values[(int)regs_all_t::REG_68K_A6].ival = reg_vals->a6;
+		values[(int)regs_all_t::REG_68K_A7].ival = reg_vals->a7;
 
-        values[REG_68K_PC].ival = reg_vals->pc & 0xFFFFFF;
-        values[REG_68K_SR].ival = reg_vals->sr;
-        values[REG_68K_SP].ival = reg_vals->sp & 0xFFFFFF;
-        values[REG_68K_PPC].ival = reg_vals->ppc & 0xFFFFFF;
-        values[REG_68K_IR].ival = reg_vals->ir;
+        values[(int)regs_all_t::REG_68K_PC].ival = reg_vals->pc & 0xFFFFFF;
+        values[(int)regs_all_t::REG_68K_SR].ival = reg_vals->sr;
+        values[(int)regs_all_t::REG_68K_SP].ival = reg_vals->sp & 0xFFFFFF;
+        values[(int)regs_all_t::REG_68K_PPC].ival = reg_vals->ppc & 0xFFFFFF;
+        values[(int)regs_all_t::REG_68K_IR].ival = reg_vals->ir;
     }
 
     if (clsmask & RC_VDP)
     {
-        dbg_req->regs_data.type = REG_TYPE_VDP;
-        send_dbg_request(dbg_req, REQ_GET_REGS);
+        dbg_req->regs_data.type = register_type_t::REG_TYPE_VDP;
+        send_dbg_request(dbg_req, request_type_t::REQ_GET_REGS);
 
         vdp_regs_t *vdp_regs = &dbg_req->regs_data.vdp_regs;
 
         for (int i = 0; i < sizeof(vdp_regs->regs_vdp) / sizeof(vdp_regs->regs_vdp[0]); ++i)
         {
-            values[REG_VDP_00 + i].ival = vdp_regs->regs_vdp[i];
+            values[(int)regs_all_t::REG_VDP_00 + i].ival = vdp_regs->regs_vdp[i];
         }
 
-        values[REG_VDP_DMA_LEN].ival = vdp_regs->dma_len;
-        values[REG_VDP_DMA_SRC].ival = vdp_regs->dma_src;
-        values[REG_VDP_DMA_DST].ival = vdp_regs->dma_dst;
+        values[(int)regs_all_t::REG_VDP_DMA_LEN].ival = vdp_regs->dma_len;
+        values[(int)regs_all_t::REG_VDP_DMA_SRC].ival = vdp_regs->dma_src;
+        values[(int)regs_all_t::REG_VDP_DMA_DST].ival = vdp_regs->dma_dst;
     }
 
     if (clsmask & RC_Z80)
     {
-        dbg_req->regs_data.type = REG_TYPE_Z80;
-        send_dbg_request(dbg_req, REQ_GET_REGS);
+        dbg_req->regs_data.type = register_type_t::REG_TYPE_Z80;
+        send_dbg_request(dbg_req, request_type_t::REQ_GET_REGS);
 
         regs_z80_data_t *z80_regs = &dbg_req->regs_data.regs_z80;
 
-        for (int i = 0; i < (REG_Z80_I - REG_Z80_PC + 1); ++i)
+        for (int i = 0; i < ((int)regs_all_t::REG_Z80_I - (int)regs_all_t::REG_Z80_PC + 1); ++i)
         {
             if (i >= 0 && i <= 12) // PC <-> HL2
             {
-                values[REG_Z80_PC + i].ival = ((unsigned int *)&z80_regs->pc)[i];
+                values[(int)regs_all_t::REG_Z80_PC + i].ival = ((unsigned int *)&z80_regs->pc)[i];
             }
             else if (i >= 13 && i <= 19) // R <-> I
             {
-                values[REG_Z80_PC + i].ival = ((unsigned char *)&z80_regs->r)[i - 13];
+                values[(int)regs_all_t::REG_Z80_PC + i].ival = ((unsigned char *)&z80_regs->r)[i - 13];
             }
         }
     }
 
-    return 1;
+    return DRC_OK;
 }
 
 static void set_reg(register_type_t type, int reg_index, unsigned int value)
@@ -457,52 +433,52 @@ static void set_reg(register_type_t type, int reg_index, unsigned int value)
     dbg_req->regs_data.type = type;
     dbg_req->regs_data.any_reg.index = reg_index;
     dbg_req->regs_data.any_reg.val = value;
-    send_dbg_request(dbg_req, REQ_SET_REG);
+    send_dbg_request(dbg_req, request_type_t::REQ_SET_REG);
 }
 
-static int idaapi write_register(thid_t tid, int regidx, const regval_t *value)
+static drc_t idaapi write_register(thid_t tid, int regidx, const regval_t *value, qstring *errbuf)
 {
-    if (regidx >= REG_68K_D0 && regidx <= REG_68K_D7)
+    if (regidx >= (int)regs_all_t::REG_68K_D0 && regidx <= (int)regs_all_t::REG_68K_D7)
     {
-        set_reg(REG_TYPE_M68K, regidx - REG_68K_D0, (uint32)value->ival);
+        set_reg(register_type_t::REG_TYPE_M68K, regidx - (int)regs_all_t::REG_68K_D0, (uint32)value->ival);
     }
-    else if (regidx >= REG_68K_A0 && regidx <= REG_68K_A7)
+    else if (regidx >= (int)regs_all_t::REG_68K_A0 && regidx <= (int)regs_all_t::REG_68K_A7)
     {
-        set_reg(REG_TYPE_M68K, regidx - REG_68K_A0, (uint32)value->ival);
+        set_reg(register_type_t::REG_TYPE_M68K, regidx - (int)regs_all_t::REG_68K_A0, (uint32)value->ival);
     }
-    else if (regidx == REG_68K_PC)
+    else if (regidx == (int)regs_all_t::REG_68K_PC)
     {
-        set_reg(REG_TYPE_M68K, REG_68K_PC, (uint32)value->ival & 0xFFFFFF);
+        set_reg(register_type_t::REG_TYPE_M68K, (int)regs_all_t::REG_68K_PC, (uint32)value->ival & 0xFFFFFF);
     }
-    else if (regidx == REG_68K_SR)
+    else if (regidx == (int)regs_all_t::REG_68K_SR)
     {
-        set_reg(REG_TYPE_M68K, REG_68K_SR, (uint16)value->ival);
+        set_reg(register_type_t::REG_TYPE_M68K, (int)regs_all_t::REG_68K_SR, (uint16)value->ival);
     }
-    else if (regidx == REG_68K_SP)
+    else if (regidx == (int)regs_all_t::REG_68K_SP)
     {
-        set_reg(REG_TYPE_M68K, REG_68K_SP, (uint32)value->ival & 0xFFFFFF);
+        set_reg(register_type_t::REG_TYPE_M68K, (int)regs_all_t::REG_68K_SP, (uint32)value->ival & 0xFFFFFF);
     }
-    else if (regidx == REG_68K_USP)
+    else if (regidx == (int)regs_all_t::REG_68K_USP)
     {
-        set_reg(REG_TYPE_M68K, REG_68K_USP, (uint32)value->ival & 0xFFFFFF);
+        set_reg(register_type_t::REG_TYPE_M68K, (int)regs_all_t::REG_68K_USP, (uint32)value->ival & 0xFFFFFF);
     }
-    else if (regidx == REG_68K_ISP)
+    else if (regidx == (int)regs_all_t::REG_68K_ISP)
     {
-        set_reg(REG_TYPE_M68K, REG_68K_ISP, (uint32)value->ival & 0xFFFFFF);
+        set_reg(register_type_t::REG_TYPE_M68K, (int)regs_all_t::REG_68K_ISP, (uint32)value->ival & 0xFFFFFF);
     }
-    else if (regidx >= REG_VDP_00 && regidx <= REG_VDP_1F)
+    else if (regidx >= (int)regs_all_t::REG_VDP_00 && regidx <= (int)regs_all_t::REG_VDP_1F)
     {
-        set_reg(REG_TYPE_VDP, regidx - REG_VDP_00, value->ival & 0xFF);
+        set_reg(register_type_t::REG_TYPE_VDP, regidx - (int)regs_all_t::REG_VDP_00, value->ival & 0xFF);
     }
-    else if (regidx >= REG_Z80_PC && regidx <= REG_Z80_I)
+    else if (regidx >= (int)regs_all_t::REG_Z80_PC && regidx <= (int)regs_all_t::REG_Z80_I)
     {
-        set_reg(REG_TYPE_Z80, regidx - REG_Z80_PC, value->ival);
+        set_reg(register_type_t::REG_TYPE_Z80, regidx - (int)regs_all_t::REG_Z80_PC, value->ival);
     }
 
-    return 1;
+    return DRC_OK;
 }
 
-static int idaapi get_memory_info(meminfo_vec_t &areas)
+static drc_t idaapi get_memory_info(meminfo_vec_t &areas, qstring *errbuf)
 {
     memory_info_t info;
 
@@ -528,16 +504,16 @@ static int idaapi get_memory_info(meminfo_vec_t &areas)
     }
     // Don't remove this loop
 
-    return 1;
+    return DRC_OK;
 }
 
-static ssize_t idaapi read_memory(ea_t ea, void *buffer, size_t size)
+static ssize_t idaapi read_memory(ea_t ea, void *buffer, size_t size, qstring *errbuf)
 {
     if ((ea >= 0xA00000 && ea < 0xA0FFFF))
     {
         dbg_req->mem_data.address = ea;
         dbg_req->mem_data.size = size;
-        send_dbg_request(dbg_req, REQ_READ_Z80);
+        send_dbg_request(dbg_req, request_type_t::REQ_READ_Z80);
 
         memcpy(buffer, &dbg_req->mem_data.z80_ram[ea & 0x1FFF], size);
         // Z80
@@ -546,7 +522,7 @@ static ssize_t idaapi read_memory(ea_t ea, void *buffer, size_t size)
     {
         dbg_req->mem_data.address = ea;
         dbg_req->mem_data.size = size;
-        send_dbg_request(dbg_req, REQ_READ_68K_ROM);
+        send_dbg_request(dbg_req, request_type_t::REQ_READ_68K_ROM);
 
         memcpy(buffer, &dbg_req->mem_data.m68k_rom[ea], size);
     }
@@ -554,7 +530,7 @@ static ssize_t idaapi read_memory(ea_t ea, void *buffer, size_t size)
     {
         dbg_req->mem_data.address = ea;
         dbg_req->mem_data.size = size;
-        send_dbg_request(dbg_req, REQ_READ_68K_RAM);
+        send_dbg_request(dbg_req, request_type_t::REQ_READ_68K_RAM);
 
         memcpy(buffer, &dbg_req->mem_data.m68k_ram[ea & 0xFFFF], size);
         // RAM
@@ -563,7 +539,7 @@ static ssize_t idaapi read_memory(ea_t ea, void *buffer, size_t size)
     return size;
 }
 
-static ssize_t idaapi write_memory(ea_t ea, const void *buffer, size_t size)
+static ssize_t idaapi write_memory(ea_t ea, const void *buffer, size_t size, qstring *errbuf)
 {
     return 0;
 }
@@ -583,7 +559,7 @@ static int idaapi is_ok_bpt(bpttype_t type, ea_t ea, int len)
     return BPT_BAD_TYPE;
 }
 
-static int idaapi update_bpts(update_bpt_info_t *bpts, int nadd, int ndel)
+static drc_t idaapi update_bpts(int* nbpts, update_bpt_info_t *bpts, int nadd, int ndel, qstring *errbuf)
 {
     for (int i = 0; i < nadd; ++i)
     {
@@ -595,22 +571,22 @@ static int idaapi update_bpts(update_bpt_info_t *bpts, int nadd, int ndel)
         switch (bpts[i].type)
         {
         case BPT_EXEC:
-            bpt_data->type = BPT_M68K_E;
+            bpt_data->type = bpt_type_t::BPT_M68K_E;
             break;
         case BPT_READ:
-            bpt_data->type = BPT_M68K_R;
+            bpt_data->type = bpt_type_t::BPT_M68K_R;
             break;
         case BPT_WRITE:
-            bpt_data->type = BPT_M68K_W;
+            bpt_data->type = bpt_type_t::BPT_M68K_W;
             break;
         case BPT_RDWR:
-            bpt_data->type = BPT_M68K_RW;
+            bpt_data->type = bpt_type_t::BPT_M68K_RW;
             break;
         }
 
         bpt_data->address = start;
         bpt_data->width = bpts[i].size;
-        send_dbg_request(dbg_req, REQ_ADD_BREAK);
+        send_dbg_request(dbg_req, request_type_t::REQ_ADD_BREAK);
 
         bpts[i].code = BPT_OK;
     }
@@ -625,26 +601,298 @@ static int idaapi update_bpts(update_bpt_info_t *bpts, int nadd, int ndel)
         switch (bpts[nadd + i].type)
         {
         case BPT_EXEC:
-            bpt_data->type = BPT_M68K_E;
+            bpt_data->type = bpt_type_t::BPT_M68K_E;
             break;
         case BPT_READ:
-            bpt_data->type = BPT_M68K_R;
+            bpt_data->type = bpt_type_t::BPT_M68K_R;
             break;
         case BPT_WRITE:
-            bpt_data->type = BPT_M68K_W;
+            bpt_data->type = bpt_type_t::BPT_M68K_W;
             break;
         case BPT_RDWR:
-            bpt_data->type = BPT_M68K_RW;
+            bpt_data->type = bpt_type_t::BPT_M68K_RW;
             break;
         }
 
         bpt_data->address = start;
-        send_dbg_request(dbg_req, REQ_DEL_BREAK);
+        send_dbg_request(dbg_req, request_type_t::REQ_DEL_BREAK);
 
         bpts[nadd + i].code = BPT_OK;
     }
 
-    return (ndel + nadd);
+    *nbpts = (ndel + nadd);
+    return DRC_OK;
+}
+
+static ssize_t idaapi idd_notify(void* , int msgid, va_list va) {
+    drc_t retcode = DRC_NONE;
+    qstring* errbuf;
+
+    switch (msgid)
+    {
+    case debugger_t::ev_init_debugger:
+    {
+        const char* hostname = va_arg(va, const char*);
+
+        int portnum = va_arg(va, int);
+        const char* password = va_arg(va, const char*);
+        errbuf = va_arg(va, qstring*);
+        QASSERT(1522, errbuf != NULL);
+        retcode = init_debugger(hostname, portnum, password, errbuf);
+    }
+    break;
+
+    case debugger_t::ev_term_debugger:
+        retcode = term_debugger();
+        break;
+
+    //case debugger_t::ev_get_processes:
+    //{
+    //    procinfo_vec_t* procs = va_arg(va, procinfo_vec_t*);
+    //    errbuf = va_arg(va, qstring*);
+    //    retcode = g_dbgmod.dbg_get_processes(procs, errbuf);
+    //}
+    //break;
+
+    case debugger_t::ev_start_process:
+    {
+        const char* path = va_arg(va, const char*);
+        const char* args = va_arg(va, const char*);
+        const char* startdir = va_arg(va, const char*);
+        uint32 dbg_proc_flags = va_arg(va, uint32);
+        const char* input_path = va_arg(va, const char*);
+        uint32 input_file_crc32 = va_arg(va, uint32);
+        errbuf = va_arg(va, qstring*);
+        retcode = s_start_process(path,
+            args,
+            startdir,
+            dbg_proc_flags,
+            input_path,
+            input_file_crc32,
+            errbuf);
+    }
+    break;
+
+    //case debugger_t::ev_attach_process:
+    //{
+    //    pid_t pid = va_argi(va, pid_t);
+    //    int event_id = va_arg(va, int);
+    //    uint32 dbg_proc_flags = va_arg(va, uint32);
+    //    errbuf = va_arg(va, qstring*);
+    //    retcode = s_attach_process(pid, event_id, dbg_proc_flags, errbuf);
+    //}
+    //break;
+
+    //case debugger_t::ev_detach_process:
+    //    retcode = g_dbgmod.dbg_detach_process();
+    //    break;
+
+    case debugger_t::ev_get_debapp_attrs:
+    {
+        debapp_attrs_t* out_pattrs = va_arg(va, debapp_attrs_t*);
+        out_pattrs->addrsize = 4;
+        out_pattrs->is_be = true;
+        out_pattrs->platform = "sega_md";
+        out_pattrs->cbsize = sizeof(debapp_attrs_t);
+        retcode = DRC_OK;
+    }
+    break;
+
+    //case debugger_t::ev_rebase_if_required_to:
+    //{
+    //    ea_t new_base = va_arg(va, ea_t);
+    //    retcode = DRC_OK;
+    //}
+    //break;
+
+    case debugger_t::ev_request_pause:
+        errbuf = va_arg(va, qstring*);
+        retcode = prepare_to_pause_process(errbuf);
+        break;
+
+    case debugger_t::ev_exit_process:
+        errbuf = va_arg(va, qstring*);
+        retcode = emul_exit_process(errbuf);
+        break;
+
+    case debugger_t::ev_get_debug_event:
+    {
+        gdecode_t* code = va_arg(va, gdecode_t*);
+        debug_event_t* event = va_arg(va, debug_event_t*);
+        int timeout_ms = va_arg(va, int);
+        *code = get_debug_event(event, timeout_ms);
+        retcode = DRC_OK;
+    }
+    break;
+
+    case debugger_t::ev_resume:
+    {
+        debug_event_t* event = va_arg(va, debug_event_t*);
+        retcode = continue_after_event(event);
+    }
+    break;
+
+    //case debugger_t::ev_set_exception_info:
+    //{
+    //    exception_info_t* info = va_arg(va, exception_info_t*);
+    //    int qty = va_arg(va, int);
+    //    g_dbgmod.dbg_set_exception_info(info, qty);
+    //    retcode = DRC_OK;
+    //}
+    //break;
+
+    //case debugger_t::ev_suspended:
+    //{
+    //    bool dlls_added = va_argi(va, bool);
+    //    thread_name_vec_t* thr_names = va_arg(va, thread_name_vec_t*);
+    //    retcode = DRC_OK;
+    //}
+    //break;
+
+    //case debugger_t::ev_thread_suspend:
+    //{
+    //    thid_t tid = va_argi(va, thid_t);
+    //    retcode = g_dbgmod.dbg_thread_suspend(tid);
+    //}
+    //break;
+
+    //case debugger_t::ev_thread_continue:
+    //{
+    //    thid_t tid = va_argi(va, thid_t);
+    //    retcode = g_dbgmod.dbg_thread_continue(tid);
+    //}
+    //break;
+
+    case debugger_t::ev_set_resume_mode:
+    {
+        thid_t tid = va_argi(va, thid_t);
+        resume_mode_t resmod = va_argi(va, resume_mode_t);
+        retcode = s_set_resume_mode(tid, resmod);
+    }
+    break;
+
+    case debugger_t::ev_read_registers:
+    {
+        thid_t tid = va_argi(va, thid_t);
+        int clsmask = va_arg(va, int);
+        regval_t* values = va_arg(va, regval_t*);
+        errbuf = va_arg(va, qstring*);
+        retcode = read_registers(tid, clsmask, values, errbuf);
+    }
+    break;
+
+    case debugger_t::ev_write_register:
+    {
+        thid_t tid = va_argi(va, thid_t);
+        int regidx = va_arg(va, int);
+        const regval_t* value = va_arg(va, const regval_t*);
+        errbuf = va_arg(va, qstring*);
+        retcode = write_register(tid, regidx, value, errbuf);
+    }
+    break;
+
+    case debugger_t::ev_get_memory_info:
+    {
+        meminfo_vec_t* ranges = va_arg(va, meminfo_vec_t*);
+        errbuf = va_arg(va, qstring*);
+        retcode = get_memory_info(*ranges, errbuf);
+    }
+    break;
+
+    case debugger_t::ev_read_memory:
+    {
+        size_t* nbytes = va_arg(va, size_t*);
+        ea_t ea = va_arg(va, ea_t);
+        void* buffer = va_arg(va, void*);
+        size_t size = va_arg(va, size_t);
+        errbuf = va_arg(va, qstring*);
+        ssize_t code = read_memory(ea, buffer, size, errbuf);
+        *nbytes = code >= 0 ? code : 0;
+        retcode = code >= 0 ? DRC_OK : DRC_NOPROC;
+    }
+    break;
+
+    case debugger_t::ev_write_memory:
+    {
+        size_t* nbytes = va_arg(va, size_t*);
+        ea_t ea = va_arg(va, ea_t);
+        const void* buffer = va_arg(va, void*);
+        size_t size = va_arg(va, size_t);
+        errbuf = va_arg(va, qstring*);
+        ssize_t code = write_memory(ea, buffer, size, errbuf);
+        *nbytes = code >= 0 ? code : 0;
+        retcode = code >= 0 ? DRC_OK : DRC_NOPROC;
+    }
+    break;
+
+    case debugger_t::ev_check_bpt:
+    {
+        int* bptvc = va_arg(va, int*);
+        bpttype_t type = va_argi(va, bpttype_t);
+        ea_t ea = va_arg(va, ea_t);
+        int len = va_arg(va, int);
+        *bptvc = is_ok_bpt(type, ea, len);
+        retcode = DRC_OK;
+    }
+    break;
+
+    case debugger_t::ev_update_bpts:
+    {
+        int* nbpts = va_arg(va, int*);
+        update_bpt_info_t* bpts = va_arg(va, update_bpt_info_t*);
+        int nadd = va_arg(va, int);
+        int ndel = va_arg(va, int);
+        errbuf = va_arg(va, qstring*);
+        retcode = update_bpts(nbpts, bpts, nadd, ndel, errbuf);
+    }
+    break;
+
+    //case debugger_t::ev_update_lowcnds:
+    //{
+    //    int* nupdated = va_arg(va, int*);
+    //    const lowcnd_t* lowcnds = va_arg(va, const lowcnd_t*);
+    //    int nlowcnds = va_arg(va, int);
+    //    errbuf = va_arg(va, qstring*);
+    //    retcode = g_dbgmod.dbg_update_lowcnds(nupdated, lowcnds, nlowcnds, errbuf);
+    //}
+    //break;
+
+#ifdef HAVE_UPDATE_CALL_STACK
+    case debugger_t::ev_update_call_stack:
+    {
+        thid_t tid = va_argi(va, thid_t);
+        call_stack_t* trace = va_arg(va, call_stack_t*);
+        retcode = g_dbgmod.dbg_update_call_stack(tid, trace);
+    }
+    break;
+#endif
+
+    //case debugger_t::ev_eval_lowcnd:
+    //{
+    //    thid_t tid = va_argi(va, thid_t);
+    //    ea_t ea = va_arg(va, ea_t);
+    //    errbuf = va_arg(va, qstring*);
+    //    retcode = g_dbgmod.dbg_eval_lowcnd(tid, ea, errbuf);
+    //}
+    //break;
+
+    //case debugger_t::ev_bin_search:
+    //{
+    //    ea_t* ea = va_arg(va, ea_t*);
+    //    ea_t start_ea = va_arg(va, ea_t);
+    //    ea_t end_ea = va_arg(va, ea_t);
+    //    const compiled_binpat_vec_t* ptns = va_arg(va, const compiled_binpat_vec_t*);
+    //    int srch_flags = va_arg(va, int);
+    //    errbuf = va_arg(va, qstring*);
+    //    if (ptns != NULL)
+    //        retcode = g_dbgmod.dbg_bin_search(ea, start_ea, end_ea, *ptns, srch_flags, errbuf);
+    //}
+    //break;
+    default:
+        retcode = DRC_NONE;
+    }
+
+    return retcode;
 }
 
 //--------------------------------------------------------------------------
@@ -660,6 +908,7 @@ debugger_t debugger =
     0x8000 + 1,
     "m68k",
     DBG_FLAG_NOHOST | DBG_FLAG_CAN_CONT_BPT | DBG_FLAG_FAKE_ATTACH | DBG_FLAG_SAFE | DBG_FLAG_NOPASSWORD | DBG_FLAG_NOSTARTDIR | DBG_FLAG_CONNSTRING | DBG_FLAG_ANYSIZE_HWBPT | DBG_FLAG_DEBTHREAD,
+    DBG_HAS_REQUEST_PAUSE | DBG_HAS_SET_RESUME_MODE | DBG_HAS_CHECK_BPT,
 
     register_classes,
     RC_GENERAL,
@@ -669,62 +918,11 @@ debugger_t debugger =
     0x1000,
 
     NULL,
-    NULL,
+    0,
     0,
 
     DBG_RESMOD_STEP_INTO | DBG_RESMOD_STEP_OVER,
 
-    init_debugger,
-    term_debugger,
-
-    process_get_info,
-
-    start_process,
-    NULL,
-    NULL,
-    rebase_if_required_to,
-    prepare_to_pause_process,
-    emul_exit_process,
-
-    get_debug_event,
-    continue_after_event,
-
-    NULL,
-    stopped_at_debug_event,
-
-    thread_suspend,
-    thread_continue,
-    set_step_mode,
-
-    read_registers,
-    write_register,
-
-    NULL,
-
-    get_memory_info,
-    read_memory,
-    write_memory,
-
-    is_ok_bpt,
-    update_bpts,
-    NULL,
-
-    NULL,
-    NULL,
-    NULL,
-
-    NULL,
-
-    NULL,
-    NULL,
-    NULL,
-
-    NULL,
-    NULL,
-
-    NULL,
-
-    NULL,
-
-    NULL,
+    NULL, // set_dbg_options
+    idd_notify
 };

@@ -16,6 +16,7 @@
 #include "disassembler.h"
 #endif
 
+#include "cpuhook.h"
 #include "debug.h"
 
 #ifdef _WIN32
@@ -191,6 +192,7 @@ void run_gui()
     create_hex_editor();
 #endif
 
+    set_cpu_hook(check_breakpoint);
     dbg_active = 1;
 
 #ifdef _WIN32
@@ -221,6 +223,7 @@ void stop_gui()
 #endif
 
     dbg_active = 0;
+    set_cpu_hook(NULL);
 
 #ifdef _WIN32
     destroy_disassembler();

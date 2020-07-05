@@ -1,13 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.136
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30225.117
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gpgx_debugger", "gpgx_debugger.vcxproj", "{6E5A2D82-D5E3-4AE2-9253-733BAC8A924C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gxida", "gxida.vcxproj", "{DC4CD76D-E7ED-4C1C-9DB1-C079907DE35F}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sega_roms_ldr", "sega_roms_ldr.vcxproj", "{D748DFCD-7226-46CB-9EC4-91391AF65170}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +21,6 @@ Global
 		{DC4CD76D-E7ED-4C1C-9DB1-C079907DE35F}.Debug|x64.Build.0 = Debug|x64
 		{DC4CD76D-E7ED-4C1C-9DB1-C079907DE35F}.Release|x64.ActiveCfg = Release|x64
 		{DC4CD76D-E7ED-4C1C-9DB1-C079907DE35F}.Release|x64.Build.0 = Release|x64
-		{D748DFCD-7226-46CB-9EC4-91391AF65170}.Debug|x64.ActiveCfg = Debug|x64
-		{D748DFCD-7226-46CB-9EC4-91391AF65170}.Debug|x64.Build.0 = Debug|x64
-		{D748DFCD-7226-46CB-9EC4-91391AF65170}.Release|x64.ActiveCfg = Release|x64
-		{D748DFCD-7226-46CB-9EC4-91391AF65170}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
