@@ -380,6 +380,8 @@ static drc_t idaapi read_registers(thid_t tid, int clsmask, regval_t *values, qs
         values[(int)regs_all_t::REG_68K_PC].ival = reg_vals->pc & 0xFFFFFF;
         values[(int)regs_all_t::REG_68K_SR].ival = reg_vals->sr;
         values[(int)regs_all_t::REG_68K_SP].ival = reg_vals->sp & 0xFFFFFF;
+        values[(int)regs_all_t::REG_68K_USP].ival = reg_vals->usp & 0xFFFFFF;
+        values[(int)regs_all_t::REG_68K_ISP].ival = reg_vals->isp & 0xFFFFFF;
         values[(int)regs_all_t::REG_68K_PPC].ival = reg_vals->ppc & 0xFFFFFF;
         values[(int)regs_all_t::REG_68K_IR].ival = reg_vals->ir;
     }
