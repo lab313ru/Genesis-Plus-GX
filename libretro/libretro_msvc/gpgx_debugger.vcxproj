@@ -46,7 +46,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>d:\RetroArch\cores\</OutDir>
-    <TargetName>$(ProjectName)_x64_d</TargetName>
+    <TargetName>$(ProjectName)_x64</TargetName>
     <IntDir>$(Platform)\$(Configuration)_gpgx\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
