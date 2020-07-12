@@ -1411,6 +1411,13 @@ INLINE void m68ki_exception_interrupt(uint int_level)
   if(new_pc == 0)
     new_pc = m68ki_read_32((EXCEPTION_UNINITIALIZED_INTERRUPT<<2));
 
+  if (!dbg_in_interrupt && dbg_trace) {
+    dbg_step_over = 1;
+    dbg_step_over_addr = REG_PC;
+    dbg_in_interrupt = 2;
+    resume_debugger();
+  }
+
   /* Generate a stack frame */
   m68ki_stack_frame_3word(REG_PC, sr);
 

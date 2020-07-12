@@ -14,6 +14,7 @@ extern "C" {
 #endif
 
 #pragma pack(push, 4)
+    // copy from cpuhook.h:: hook_type_t
 typedef enum {
     BPT_ANY = (0 << 0),
     // M68K
