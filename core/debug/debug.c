@@ -626,7 +626,6 @@ void process_request()
     } break;
     case REQ_ATTACH:
         activate_debugger();
-        dbg_first_paused = 0;
         break;
     case REQ_PAUSE:
         pause_debugger();
