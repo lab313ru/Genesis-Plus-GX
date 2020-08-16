@@ -25,11 +25,10 @@
 #include "vdp_ctrl.h"
 #include "z80.h"
 
-static int dbg_first_paused, dbg_dont_check_bp;
+static int dbg_first_paused, dbg_dont_check_bp, dbg_continue_after_bp;
 int dbg_trace;
 int dbg_step_over;
 int dbg_in_interrupt;
-static int dbg_last_pc;
 unsigned int dbg_step_over_addr;
 
 static dbg_request_t *dbg_req = NULL;
@@ -246,9 +245,9 @@ void deactivate_shared_mem()
 }
 
 static unsigned int calc_step(int is_step_in) {
-    unsigned int pc = m68k_get_reg(M68K_REG_PC);
-    unsigned int sp = m68k_get_reg(M68K_REG_SP);
-    unsigned int opc = m68ki_read_imm_16();
+    unsigned int pc = REG_PC;
+    unsigned int sp = REG_SP;
+    unsigned short opc = m68ki_read_imm_16(pc);
 
     unsigned int dest_pc = (unsigned int)(-1);
 
@@ -258,7 +257,7 @@ static unsigned int calc_step(int is_step_in) {
         if (!is_step_in) {
           m68k_op_rts_32();
         }
-        dest_pc = m68k_get_reg(M68K_REG_PC);
+        dest_pc = REG_PC;
         if (is_step_in) {
           m68k_op_rts_32();
         }
@@ -268,7 +267,7 @@ static unsigned int calc_step(int is_step_in) {
         if (!is_step_in) {
           m68k_op_rts_32();
         }
-        dest_pc = m68k_get_reg(M68K_REG_PC);
+        dest_pc = REG_PC;
         if (is_step_in) {
           m68k_op_rts_32();
         }
@@ -278,7 +277,7 @@ static unsigned int calc_step(int is_step_in) {
         if (!is_step_in) {
           m68k_op_rts_32();
         }
-        dest_pc = m68k_get_reg(M68K_REG_PC);
+        dest_pc = REG_PC;
         if (is_step_in) {
           m68k_op_rts_32();
         }
@@ -288,7 +287,7 @@ static unsigned int calc_step(int is_step_in) {
         if (!is_step_in) {
           m68k_op_rts_32();
         }
-        dest_pc = m68k_get_reg(M68K_REG_PC);
+        dest_pc = REG_PC;
         if (is_step_in) {
           m68k_op_rts_32();
         }
@@ -298,7 +297,7 @@ static unsigned int calc_step(int is_step_in) {
         if (!is_step_in) {
           m68k_op_rts_32();
         }
-        dest_pc = m68k_get_reg(M68K_REG_PC);
+        dest_pc = REG_PC;
         if (is_step_in) {
           m68k_op_rts_32();
         }
@@ -308,7 +307,7 @@ static unsigned int calc_step(int is_step_in) {
         if (!is_step_in) {
           m68k_op_rts_32();
         }
-        dest_pc = m68k_get_reg(M68K_REG_PC);
+        dest_pc = REG_PC;
         if (is_step_in) {
           m68k_op_rts_32();
         }
@@ -318,7 +317,7 @@ static unsigned int calc_step(int is_step_in) {
         if (!is_step_in) {
           m68k_op_rts_32();
         }
-        dest_pc = m68k_get_reg(M68K_REG_PC);
+        dest_pc = REG_PC;
         if (is_step_in) {
           m68k_op_rts_32();
         }
@@ -329,7 +328,7 @@ static unsigned int calc_step(int is_step_in) {
         if (!is_step_in) {
           m68k_op_rts_32();
         }
-        dest_pc = m68k_get_reg(M68K_REG_PC);
+        dest_pc = REG_PC;
         if (is_step_in) {
           m68k_op_rts_32();
         }
@@ -339,7 +338,7 @@ static unsigned int calc_step(int is_step_in) {
         if (!is_step_in) {
           m68k_op_rts_32();
         }
-        dest_pc = m68k_get_reg(M68K_REG_PC);
+        dest_pc = REG_PC;
         if (is_step_in) {
           m68k_op_rts_32();
         }
@@ -349,7 +348,7 @@ static unsigned int calc_step(int is_step_in) {
         if (!is_step_in) {
           m68k_op_rts_32();
         }
-        dest_pc = m68k_get_reg(M68K_REG_PC);
+        dest_pc = REG_PC;
         if (is_step_in) {
           m68k_op_rts_32();
         }
@@ -357,12 +356,12 @@ static unsigned int calc_step(int is_step_in) {
     // dbf
     else if ((opc & 0xfff8) == 0x51C8) {
         if (!is_step_in) {
-          dest_pc = m68k_get_reg(M68K_REG_PC) + 2;
+          dest_pc = REG_PC + 2;
         }
     }
 
-    m68k_set_reg(M68K_REG_PC, pc);
-    m68k_set_reg(M68K_REG_SP, sp);
+    REG_PC = pc;
+    REG_SP = sp;
 
     return dest_pc;
 }
@@ -643,7 +642,7 @@ void process_request()
         {
             unsigned int dest_pc = calc_step(dbg_req->req_type == REQ_STEP_INTO);
 
-            if (dest_pc != (unsigned int)(-1))
+            if (dest_pc != (unsigned int)(-1) && dbg_req->req_type != REQ_STEP_INTO)
             {
                 dbg_step_over = 1;
                 dbg_step_over_addr = dest_pc;
@@ -677,7 +676,7 @@ void stop_debugging()
     detach_debugger();
     deactivate_debugger();
 
-    dbg_first_paused = dbg_req->dbg_paused = dbg_trace = dbg_dont_check_bp = dbg_step_over = dbg_step_over_addr = dbg_last_pc = dbg_in_interrupt = 0;
+    dbg_first_paused = dbg_req->dbg_paused = dbg_trace = dbg_dont_check_bp = dbg_step_over = dbg_step_over_addr = dbg_in_interrupt = dbg_continue_after_bp = 0;
 }
 
 void start_debugging()
@@ -689,7 +688,7 @@ void start_debugging()
 
     init_bpt_list();
 
-    dbg_first_paused = dbg_req->dbg_paused = dbg_trace = dbg_dont_check_bp = dbg_step_over = dbg_step_over_addr = dbg_last_pc = dbg_in_interrupt = 0;
+    dbg_first_paused = dbg_req->dbg_paused = dbg_trace = dbg_dont_check_bp = dbg_step_over = dbg_step_over_addr = dbg_in_interrupt = dbg_continue_after_bp = 0;
 }
 
 int is_debugger_accessible()
@@ -700,15 +699,24 @@ int is_debugger_accessible()
 void process_breakpoints(bpt_type_t type, int width, unsigned int address, unsigned int value) {
     switch (type) {
     case BPT_M68K_E: {
-        int handled_event = 0;
-        int is_step_over = 0;
-        int is_step_in = 0;
-
         if (!dbg_req || !dbg_req->dbg_active)
             return;
 
-        if (dbg_req->dbg_paused && dbg_first_paused && !dbg_trace)
+        if (dbg_first_paused && dbg_in_interrupt) {
+            unsigned int pc = REG_PC;
+            unsigned short opc = m68k_read_immediate_16(pc);
+
+            if (opc != 0x4E73) { // rte
+                break;
+            }
+
+            dbg_in_interrupt = 0; // we at rte
+            break;
+        }
+
+        if (dbg_req->dbg_paused && dbg_first_paused && !dbg_trace) {
             longjmp(jmp_env, 1);
+        }
 
         if (!dbg_first_paused) {
             dbg_first_paused = 1;
@@ -719,53 +727,50 @@ void process_breakpoints(bpt_type_t type, int width, unsigned int address, unsig
             send_dbg_event(DBG_EVT_STARTED);
         }
 
-        if (dbg_trace || dbg_in_interrupt == 1) {
-            is_step_in = 1;
+        if (dbg_trace) {
             dbg_trace = 0;
             dbg_req->dbg_paused = 1;
 
             dbg_req->dbg_events[dbg_req->dbg_events_count].pc = address;
             send_dbg_event(DBG_EVT_STEP);
-
-            handled_event = 1;
+            break;
         }
 
         if (!dbg_req->dbg_paused) {
             if (dbg_step_over && address == dbg_step_over_addr) {
-                if (dbg_in_interrupt == 2) {
-                    dbg_in_interrupt = 1;
-                }
-                else {
-                    is_step_over = 1;
-                    dbg_step_over = 0;
-                    dbg_step_over_addr = 0;
+                dbg_step_over = 0;
+                dbg_step_over_addr = 0;
 
-                    dbg_req->dbg_paused = 1;
-                }
+                dbg_req->dbg_paused = 1;
+
+                dbg_req->dbg_events[dbg_req->dbg_events_count].pc = address;
+                send_dbg_event(DBG_EVT_STEP);
+
+                longjmp(jmp_env, 1);
             }
 
-            if (dbg_last_pc != address)
+            if (!dbg_continue_after_bp) {
                 check_breakpoint(BPT_M68K_E, 1, address, address);
+            }
 
             if (dbg_req->dbg_paused) {
                 dbg_req->dbg_events[dbg_req->dbg_events_count].pc = address;
-                send_dbg_event(is_step_over ? DBG_EVT_STEP : DBG_EVT_BREAK);
+                send_dbg_event(DBG_EVT_BREAK);
 
-                handled_event = 1;
+                dbg_continue_after_bp = 1;
+
+                longjmp(jmp_env, 1);
+            }
+            else {
+                if (dbg_continue_after_bp) {
+                    dbg_continue_after_bp = 0;
+                }
             }
         }
-
-        if (dbg_first_paused && (!handled_event) && dbg_req->dbg_paused) {
+        else {
             dbg_req->dbg_events[dbg_req->dbg_events_count].pc = address;
             send_dbg_event(DBG_EVT_PAUSED);
-        }
 
-        dbg_last_pc = address;
-
-        if (dbg_req->dbg_paused && (!is_step_in || is_step_over || (dbg_in_interrupt == 1)))
-        {
-            if (dbg_in_interrupt == 1)
-                dbg_in_interrupt = 0;
             longjmp(jmp_env, 1);
         }
     } break;
@@ -777,5 +782,5 @@ void process_breakpoints(bpt_type_t type, int width, unsigned int address, unsig
 
 int is_debugger_paused()
 {
-    return is_debugger_accessible() && dbg_req->dbg_paused && dbg_first_paused && !dbg_trace;
+    return is_debugger_accessible() && dbg_first_paused && dbg_req->dbg_paused && (!dbg_trace || dbg_step_over);
 }
