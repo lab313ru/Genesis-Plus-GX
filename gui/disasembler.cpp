@@ -745,6 +745,8 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
         SetTimer(hWnd, DBG_EVENTS_TIMER, 10, NULL);
         SetTimer(hWnd, DBG_WHEN_IDA_UPDATE, 500, NULL);
+
+        send_dbg_request(dbg_req, REQ_ATTACH);
     } break;
     case WM_TIMER:
     {

@@ -638,8 +638,6 @@ void process_request()
     } break;
     case REQ_ATTACH:
         activate_debugger();
-
-        //send_dbg_event(REG_PC, DBG_EVT_PAUSED);
         dbg_req->dbg_paused = 1;
         break;
     case REQ_PAUSE:
