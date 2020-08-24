@@ -188,7 +188,7 @@ static int idaapi check_debugger_events(void *ud)
     {
         dbg_req->is_ida = 1;
 
-        int event_index = recv_dbg_event(dbg_req, 0);
+        int event_index = recv_dbg_event(dbg_req, 0, 1);
         if (event_index == -1)
         {
             qsleep(10);
@@ -270,21 +270,29 @@ static drc_t idaapi s_start_process(const char *path,
 
     if (!dbg_req)
     {
-        show_wait_box("HIDECANCEL\nWaiting for connection to plugin...");
+        show_wait_box("Waiting for connection to plugin...");
 
         while (!dbg_req)
         {
             dbg_req = open_shared_mem();
+
+            if (user_cancelled()) {
+                break;
+            }
         }
 
         hide_wait_box();
     }
 
-    events_thread = qthread_create(check_debugger_events, NULL);
+    if (dbg_req) {
+        events_thread = qthread_create(check_debugger_events, NULL);
 
-    send_dbg_request(dbg_req, request_type_t::REQ_ATTACH);
+        send_dbg_request(dbg_req, request_type_t::REQ_ATTACH);
 
-    return DRC_OK;
+        return DRC_OK;
+    }
+
+    return DRC_FAILED;
 }
 
 static drc_t idaapi prepare_to_pause_process(qstring *errbuf)

@@ -65,7 +65,7 @@ void close_shared_mem(dbg_request_t **request)
 #endif
 }
 
-int recv_dbg_event(dbg_request_t *request, int wait)
+int recv_dbg_event(dbg_request_t *request, int wait, int pop)
 {
     while (request->dbg_active || request->dbg_events_count)
     {
@@ -73,7 +73,9 @@ int recv_dbg_event(dbg_request_t *request, int wait)
         {
             if (request->dbg_events[i].type != DBG_EVT_NO_EVENT)
             {
-                request->dbg_events_count -= 1;
+                if (pop) {
+                    request->dbg_events_count -= 1;
+                }
                 return i;
             }
         }

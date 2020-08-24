@@ -621,7 +621,7 @@ static void check_debugger_events()
     if (!dbg_req->dbg_active)
         return;
 
-    int event_index = recv_dbg_event(dbg_req, 0);
+    int event_index = recv_dbg_event(dbg_req, 0, !dbg_req->is_ida);
     if (event_index == -1)
         return;
 

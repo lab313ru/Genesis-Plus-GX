@@ -257,7 +257,7 @@ typedef struct {
 
 dbg_request_t *open_shared_mem();
 void close_shared_mem(dbg_request_t **request);
-int recv_dbg_event(dbg_request_t *request, int wait);
+int recv_dbg_event(dbg_request_t *request, int wait, int pop);
 void send_dbg_request(dbg_request_t *request, request_type_t type);
 
 #ifdef __cplusplus
