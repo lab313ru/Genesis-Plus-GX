@@ -621,11 +621,11 @@ static void check_debugger_events()
     if (!dbg_req->dbg_active)
         return;
 
-    int event_index = recv_dbg_event(dbg_req, 0, !dbg_req->is_ida);
+    int event_index = recv_dbg_event_dis(dbg_req, 0);
     if (event_index == -1)
         return;
 
-    debugger_event_t *dbg_event = &dbg_req->dbg_events[event_index];
+    debugger_event_t *dbg_event = &dbg_req->dbg_events_dis[event_index];
 
     switch (dbg_event->type)
     {
@@ -745,8 +745,6 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
         SetTimer(hWnd, DBG_EVENTS_TIMER, 10, NULL);
         SetTimer(hWnd, DBG_WHEN_IDA_UPDATE, 500, NULL);
-
-        send_dbg_request(dbg_req, REQ_ATTACH);
     } break;
     case WM_TIMER:
     {
@@ -758,7 +756,7 @@ LRESULT CALLBACK DisasseblerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
                 check_debugger_events();
             break;
         case DBG_WHEN_IDA_UPDATE:
-            if (dbg_req && dbg_req->is_ida && (dbg_req->dbg_events_count > 0 || dbg_req->dbg_paused))
+            if (dbg_req && dbg_req->is_ida && (dbg_req->dbg_events_count_ida > 0 || dbg_req->dbg_paused))
                 update_dbg_window_info(true, true, true);
             break;
         }

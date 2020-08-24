@@ -150,10 +150,15 @@ static void init_bpt_list()
         clear_bpt_list();
 }
 
-void send_dbg_event(dbg_event_type_t type)
+static void send_dbg_event(unsigned int address, dbg_event_type_t type)
 {
-    dbg_req->dbg_events[dbg_req->dbg_events_count].type = type;
-    dbg_req->dbg_events_count += 1;
+    dbg_req->dbg_events_dis[dbg_req->dbg_events_count_dis].pc = address;
+    dbg_req->dbg_events_dis[dbg_req->dbg_events_count_dis].type = type;
+    dbg_req->dbg_events_count_dis += 1;
+
+    dbg_req->dbg_events_ida[dbg_req->dbg_events_count_ida].pc = address;
+    dbg_req->dbg_events_ida[dbg_req->dbg_events_count_ida].type = type;
+    dbg_req->dbg_events_count_ida += 1;
 }
 
 void check_breakpoint(bpt_type_t type, int width, unsigned int address, unsigned int value)
@@ -167,8 +172,7 @@ void check_breakpoint(bpt_type_t type, int width, unsigned int address, unsigned
         if ((address <= (bp->address + bp->width)) && ((address + width) >= bp->address)) {
             dbg_req->dbg_paused = 1;
 
-            dbg_req->dbg_events[dbg_req->dbg_events_count].pc = address;
-            send_dbg_event(DBG_EVT_BREAK);
+            send_dbg_event(address, DBG_EVT_BREAK);
             break;
         }
     }
@@ -634,9 +638,9 @@ void process_request()
     } break;
     case REQ_ATTACH:
         activate_debugger();
+
+        //send_dbg_event(REG_PC, DBG_EVT_PAUSED);
         dbg_req->dbg_paused = 1;
-        send_dbg_event(DBG_EVT_STARTED);
-        send_dbg_event(DBG_EVT_PAUSED);
         break;
     case REQ_PAUSE:
         pause_debugger();
@@ -678,7 +682,7 @@ void process_request()
 
 void stop_debugging()
 {
-    send_dbg_event(DBG_EVT_STOPPED);
+    send_dbg_event(0, DBG_EVT_STOPPED);
     detach_debugger();
 #ifdef _WIN32
     Sleep(1000);
@@ -733,17 +737,14 @@ void process_breakpoints(bpt_type_t type, int width, unsigned int address, unsig
             dbg_first_paused = 1;
             dbg_req->dbg_paused = 1;
 
-            dbg_req->dbg_events[dbg_req->dbg_events_count].pc = address;
-            strncpy(dbg_req->dbg_events[dbg_req->dbg_events_count].msg, "gpgx", sizeof(dbg_req->dbg_events[dbg_req->dbg_events_count].msg));
-            send_dbg_event(DBG_EVT_STARTED);
+            send_dbg_event(address, DBG_EVT_STARTED);
         }
 
         if (dbg_trace) {
             dbg_trace = 0;
             dbg_req->dbg_paused = 1;
 
-            dbg_req->dbg_events[dbg_req->dbg_events_count].pc = address;
-            send_dbg_event(DBG_EVT_STEP);
+            send_dbg_event(address, DBG_EVT_STEP);
             break;
         }
 
@@ -754,8 +755,7 @@ void process_breakpoints(bpt_type_t type, int width, unsigned int address, unsig
 
                 dbg_req->dbg_paused = 1;
 
-                dbg_req->dbg_events[dbg_req->dbg_events_count].pc = address;
-                send_dbg_event(DBG_EVT_STEP);
+                send_dbg_event(address, DBG_EVT_STEP);
 
                 longjmp(jmp_env, 1);
             }
@@ -776,8 +776,7 @@ void process_breakpoints(bpt_type_t type, int width, unsigned int address, unsig
             }
         }
         else {
-            dbg_req->dbg_events[dbg_req->dbg_events_count].pc = address;
-            send_dbg_event(DBG_EVT_PAUSED);
+            send_dbg_event(address, DBG_EVT_PAUSED);
 
             longjmp(jmp_env, 1);
         }

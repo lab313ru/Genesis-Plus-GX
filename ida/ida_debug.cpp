@@ -184,18 +184,18 @@ static drc_t idaapi term_debugger(void)
 
 static int idaapi check_debugger_events(void *ud)
 {
-    while (dbg_req->dbg_active || dbg_req->dbg_events_count)
+    while (dbg_req->dbg_active || dbg_req->dbg_events_count_ida)
     {
         dbg_req->is_ida = 1;
 
-        int event_index = recv_dbg_event(dbg_req, 0, 1);
+        int event_index = recv_dbg_event_ida(dbg_req, 0);
         if (event_index == -1)
         {
             qsleep(10);
             continue;
         }
 
-        debugger_event_t *dbg_event = &dbg_req->dbg_events[event_index];
+        debugger_event_t *dbg_event = &dbg_req->dbg_events_ida[event_index];
 
         debug_event_t ev;
         switch (dbg_event->type)
@@ -203,7 +203,7 @@ static int idaapi check_debugger_events(void *ud)
         case dbg_event_type_t::DBG_EVT_STARTED: {
             ev.pid = 1;
             ev.tid = 1;
-            ev.ea = BADADDR;
+            ev.ea = dbg_event->pc;
             ev.handled = true;
 
             ev.set_modinfo(PROCESS_STARTED).name.sprnt("GPGX");
