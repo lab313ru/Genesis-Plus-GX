@@ -2782,7 +2782,7 @@ void retro_init(void)
 
 void retro_deinit(void)
 {
-    
+    stop_debugging();
 }
 
 void retro_reset(void)
