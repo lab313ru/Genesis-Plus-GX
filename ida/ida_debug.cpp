@@ -764,19 +764,21 @@ static ssize_t idaapi idd_notify(void* , int msgid, va_list va) {
     //}
     //break;
 
-    //case debugger_t::ev_thread_suspend:
-    //{
-    //    thid_t tid = va_argi(va, thid_t);
-    //    retcode = g_dbgmod.dbg_thread_suspend(tid);
-    //}
-    //break;
+    case debugger_t::ev_thread_suspend:
+    {
+        thid_t tid = va_argi(va, thid_t);
+        pause_execution();
+        retcode = DRC_OK;
+    }
+    break;
 
-    //case debugger_t::ev_thread_continue:
-    //{
-    //    thid_t tid = va_argi(va, thid_t);
-    //    retcode = g_dbgmod.dbg_thread_continue(tid);
-    //}
-    //break;
+    case debugger_t::ev_thread_continue:
+    {
+        thid_t tid = va_argi(va, thid_t);
+        continue_execution();
+        retcode = DRC_OK;
+    }
+    break;
 
     case debugger_t::ev_set_resume_mode:
     {
@@ -923,7 +925,7 @@ debugger_t debugger =
     0x8000 + 1,
     "m68k",
     DBG_FLAG_NOHOST | DBG_FLAG_CAN_CONT_BPT | DBG_FLAG_FAKE_ATTACH | DBG_FLAG_SAFE | DBG_FLAG_NOPASSWORD | DBG_FLAG_NOSTARTDIR | DBG_FLAG_NOPARAMETERS | DBG_FLAG_ANYSIZE_HWBPT | DBG_FLAG_DEBTHREAD | DBG_FLAG_PREFER_SWBPTS,
-    DBG_HAS_GET_PROCESSES | DBG_HAS_REQUEST_PAUSE | DBG_HAS_SET_RESUME_MODE | DBG_HAS_CHECK_BPT,
+    DBG_HAS_GET_PROCESSES | DBG_HAS_REQUEST_PAUSE | DBG_HAS_SET_RESUME_MODE | DBG_HAS_CHECK_BPT | DBG_HAS_THREAD_SUSPEND | DBG_HAS_THREAD_CONTINUE,
 
     register_classes,
     RC_GENERAL,

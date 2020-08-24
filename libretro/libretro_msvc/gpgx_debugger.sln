@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gpgx_debugger", "gpgx_debug
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gxida", "gxida.vcxproj", "{DC4CD76D-E7ED-4C1C-9DB1-C079907DE35F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sega_roms_ldr", "sega_roms_ldr.vcxproj", "{9E3FD2A3-3F03-42FB-B268-82505CCF0F6C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,10 @@ Global
 		{DC4CD76D-E7ED-4C1C-9DB1-C079907DE35F}.Debug|x64.Build.0 = Debug|x64
 		{DC4CD76D-E7ED-4C1C-9DB1-C079907DE35F}.Release|x64.ActiveCfg = Release|x64
 		{DC4CD76D-E7ED-4C1C-9DB1-C079907DE35F}.Release|x64.Build.0 = Release|x64
+		{9E3FD2A3-3F03-42FB-B268-82505CCF0F6C}.Debug|x64.ActiveCfg = Debug|x64
+		{9E3FD2A3-3F03-42FB-B268-82505CCF0F6C}.Debug|x64.Build.0 = Debug|x64
+		{9E3FD2A3-3F03-42FB-B268-82505CCF0F6C}.Release|x64.ActiveCfg = Release|x64
+		{9E3FD2A3-3F03-42FB-B268-82505CCF0F6C}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
