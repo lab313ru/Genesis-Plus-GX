@@ -150,6 +150,12 @@ static void init_bpt_list()
         clear_bpt_list();
 }
 
+void send_dbg_event(dbg_event_type_t type)
+{
+    dbg_req->dbg_events[dbg_req->dbg_events_count].type = type;
+    dbg_req->dbg_events_count += 1;
+}
+
 void check_breakpoint(bpt_type_t type, int width, unsigned int address, unsigned int value)
 {
     if (!dbg_req || !dbg_req->dbg_active || dbg_dont_check_bp)
@@ -160,6 +166,9 @@ void check_breakpoint(bpt_type_t type, int width, unsigned int address, unsigned
         if (!(bp->type & type) || !bp->enabled) continue;
         if ((address <= (bp->address + bp->width)) && ((address + width) >= bp->address)) {
             dbg_req->dbg_paused = 1;
+
+            dbg_req->dbg_events[dbg_req->dbg_events_count].pc = address;
+            send_dbg_event(DBG_EVT_BREAK);
             break;
         }
     }
@@ -247,7 +256,7 @@ void deactivate_shared_mem()
 static unsigned int calc_step(int is_step_in) {
     unsigned int pc = REG_PC;
     unsigned int sp = REG_SP;
-    unsigned short opc = m68ki_read_imm_16(pc);
+    unsigned short opc = m68ki_read_imm_16();
 
     unsigned int dest_pc = (unsigned int)(-1);
 
@@ -625,6 +634,9 @@ void process_request()
     } break;
     case REQ_ATTACH:
         activate_debugger();
+        dbg_req->dbg_paused = 1;
+        send_dbg_event(DBG_EVT_STARTED);
+        send_dbg_event(DBG_EVT_PAUSED);
         break;
     case REQ_PAUSE:
         pause_debugger();
@@ -664,16 +676,15 @@ void process_request()
     dbg_req->req_type = REQ_NO_REQUEST;
 }
 
-void send_dbg_event(dbg_event_type_t type)
-{
-    dbg_req->dbg_events[dbg_req->dbg_events_count].type = type;
-    dbg_req->dbg_events_count += 1;
-}
-
 void stop_debugging()
 {
     send_dbg_event(DBG_EVT_STOPPED);
     detach_debugger();
+#ifdef _WIN32
+    Sleep(1000);
+#else
+    usleep(1000 * 1000);
+#endif
     deactivate_debugger();
 
     dbg_first_paused = dbg_req->dbg_paused = dbg_trace = dbg_dont_check_bp = dbg_step_over = dbg_step_over_addr = dbg_in_interrupt = dbg_continue_after_bp = 0;
@@ -697,11 +708,11 @@ int is_debugger_accessible()
 }
 
 void process_breakpoints(bpt_type_t type, int width, unsigned int address, unsigned int value) {
+    if (!dbg_req || !dbg_req->dbg_active)
+        return;
+
     switch (type) {
     case BPT_M68K_E: {
-        if (!dbg_req || !dbg_req->dbg_active)
-            return;
-
         if (dbg_first_paused && dbg_in_interrupt) {
             unsigned int pc = REG_PC;
             unsigned short opc = m68k_read_immediate_16(pc);
@@ -754,9 +765,6 @@ void process_breakpoints(bpt_type_t type, int width, unsigned int address, unsig
             }
 
             if (dbg_req->dbg_paused) {
-                dbg_req->dbg_events[dbg_req->dbg_events_count].pc = address;
-                send_dbg_event(DBG_EVT_BREAK);
-
                 dbg_continue_after_bp = 1;
 
                 longjmp(jmp_env, 1);
