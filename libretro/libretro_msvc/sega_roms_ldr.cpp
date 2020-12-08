@@ -317,7 +317,7 @@ static void idaapi load_file(linput_t* li, ushort neflags, const char* fileforma
         | AF_STKARG  //     0x0008          // Propagate stack argument information
         | AF_REGARG  //     0x0010          // Propagate register argument information
         | AF_SIGMLT  //     0x0080          // Allow recognition of several copies of the same function
-        | AF_FTAIL  //      0x0100          // Create function tails
+        //| AF_FTAIL  //      0x0100          // Create function tails
         | AF_DATOFF  //     0x0200          // Automatically convert data to offsets
         | AF_TRFUNC  //     0x2000          // Truncate functions upon code deletion
         | AF_PURDAT  //     0x4000          // Control flow to data segment is ignored
@@ -341,7 +341,7 @@ static void idaapi load_file(linput_t* li, ushort neflags, const char* fileforma
     add_vdp_status_enum();
 
     idainfo *_inf = &inf;
-    _inf->outflags |= OFLG_LZERO;
+    //_inf->outflags |= OFLG_LZERO;
     _inf->baseaddr = _inf->start_cs = 0;
     _inf->start_ip = _inf->start_ea = _inf->main = _vect.Reset; // Reset
     _inf->start_sp = _vect.SSP;

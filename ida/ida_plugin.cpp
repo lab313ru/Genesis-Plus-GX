@@ -329,6 +329,13 @@ static ssize_t idaapi hook_idp(void *user_data, int notification_code, va_list v
             get_func_name(&name, trap_addr);
             set_cmt(insn->ea, name.c_str(), false);
             insn->add_cref(trap_addr, insn->Op1.offb, fl_CN);
+
+            if (func_does_return(trap_addr)) {
+                func_t* trap_func = get_func(trap_addr);
+                int argsize = (trap_func != nullptr) ? trap_func->argsize : 0;
+                insn->add_cref(insn->ea + 2 + argsize, 0, fl_F); // calc next insn
+            }
+
             return 1;
         }
 
