@@ -196,363 +196,6 @@ static void print_op(ea_t ea, op_t *op)
 }
 #endif
 
-typedef const regval_t &(idaapi *getreg_func_t)(const char *name, const regval_t *regvalues);
-
-static bool insn_analyzed = false;
-
-static ssize_t idaapi hook_idp(void *user_data, int notification_code, va_list va)
-{
-    switch (notification_code)
-    {
-    case processor_t::ev_ana_insn:
-    {
-        insn_t *out = va_arg(va, insn_t *);
-
-        if (insn_analyzed)
-            return out->size;
-
-        uint16 itype = 0;
-        ea_t value = out->ea;
-        uchar b = get_byte(out->ea);
-
-        if (b == 0xA0 || b == 0xF0)
-        {
-            switch (b)
-            {
-            case 0xA0:
-                itype = M68K_linea;
-                value = get_dword(0x0A * sizeof(uint32));
-                break;
-            case 0xF0:
-                itype = M68K_linef;
-                value = get_dword(0x0B * sizeof(uint32));
-                break;
-            }
-
-            out->itype = itype;
-            out->size = 2;
-
-            out->Op1.type = o_near;
-            out->Op1.offb = 1;
-            out->Op1.dtype = dt_dword;
-            out->Op1.addr = value;
-            out->Op1.phrase = 0x0A;
-            out->Op1.specflag1 = 2;
-
-            out->Op2.type = o_imm;
-            out->Op2.offb = 1;
-            out->Op2.dtype = dt_byte;
-            out->Op2.value = get_byte(out->ea + 1);
-        }
-        else
-        {
-            insn_analyzed = true;
-
-            if (ph.ana_insn(out) <= 0)
-            {
-                insn_analyzed = false;
-                break;
-            }
-
-            insn_analyzed = false;
-        }
-
-#ifdef _DEBUG
-        print_insn(out);
-#endif
-
-        for (int i = 0; i < UA_MAXOP; ++i)
-        {
-            op_t &op = out->ops[i];
-
-#ifdef _DEBUG
-            print_op(out->ea, &op);
-#endif
-
-            switch (op.type)
-            {
-            case o_near:
-            case o_mem:
-            {
-                op.addr &= 0xFFFFFF; // for any mirrors
-
-                if ((op.addr & 0xE00000) == 0xE00000) // RAM mirrors
-                    op.addr |= 0x1F0000;
-
-                if ((op.addr >= 0xC00000 && op.addr <= 0xC0001F) ||
-                    (op.addr >= 0xC00020 && op.addr <= 0xC0003F)) // VDP mirrors
-                    op.addr &= 0xC000FF;
-
-                if (out->itype == 0x75 && op.n == 0 && op.phrase == 9 && (op.addr & 0xFFFF0000) == 0xFF0000)
-                {
-                    op.type = o_mem;
-                    //op.specflag1 = 1;
-                }
-                else if ((out->itype == 0x76 || out->itype == 0x75 || out->itype == 0x74) && op.n == 0 &&
-                    (op.phrase == 0x09 || op.phrase == 0x0A) &&
-                    (op.addr != 0 && op.addr <= 0xA00000) &&
-                    op.specflag1 == 2) // lea table(pc),Ax; jsr func(pc); jmp label(pc)
-                {
-                    short diff = op.addr - value;
-                    if (diff >= SHRT_MIN && diff <= SHRT_MAX)
-                    {
-                        out->Op1.type = o_displ;
-                        out->Op1.offb = 2;
-                        out->Op1.dtype = dt_dword;
-                        out->Op1.phrase = 0x5B;
-                        out->Op1.specflag1 = 0x10;
-                    }
-                }
-            } break;
-            case o_imm:
-            {
-                if (out->itype != 0x7F || op.n != 0) // movea
-                    break;
-
-                if (op.value & 0xFF0000 && op.dtype == dt_word) {
-                    op.value &= 0xFFFF;
-                    op_offset(out->ea, op.n, REF_OFF32, BADADDR, 0xFF0000);
-                }
-            } break;
-            }
-        }
-
-        return out->size;
-    } break;
-    case processor_t::ev_emu_insn:
-    {
-        insn_t *insn = va_arg(va, insn_t *);
-        if (insn->itype == 0xB6) // trap #X
-        {
-            qstring name;
-            ea_t trap_addr = get_dword((0x20 + (insn->Op1.value & 0xF)) * sizeof(uint32));
-            get_func_name(&name, trap_addr);
-            set_cmt(insn->ea, name.c_str(), false);
-            insn->add_cref(trap_addr, insn->Op1.offb, fl_CN);
-
-            if (func_does_return(trap_addr)) {
-                func_t* trap_func = get_func(trap_addr);
-                int argsize = (trap_func != nullptr) ? trap_func->argsize : 0;
-                insn->add_cref(insn->ea + 2 + argsize, 0, fl_F); // calc next insn
-            }
-
-            return 1;
-        }
-
-        if ((insn->itype == 0x76 || insn->itype == 0x75 || insn->itype == 0x74) &&
-            insn->Op1.phrase == 0x5B && insn->Op1.specflag1 == 0x10) // lea table(pc),Ax; jsr func(pc); jmp label(pc)
-        {
-            short diff = insn->Op1.addr - insn->ea;
-            if (diff >= SHRT_MIN && diff <= SHRT_MAX)
-            {
-                insn->add_dref(insn->Op1.addr, insn->Op1.offb, dr_O);
-
-                if (insn->itype != 0x74)
-                    insn->add_cref(insn->ea + insn->size, 0, fl_F);
-
-                return 1;
-            }
-        }
-
-        if (insn->itype == M68K_linea || insn->itype == M68K_linef)
-        {
-            insn->add_cref(insn->Op1.addr, 0, fl_CN);
-            insn->add_cref(insn->ea + insn->size, insn->Op1.offb, fl_F);
-            return 1;
-        }
-    } break;
-    case processor_t::ev_out_mnem:
-    {
-        outctx_t *outctx = va_arg(va, outctx_t *);
-        if (outctx->insn.itype != M68K_linea && outctx->insn.itype != M68K_linef)
-            break;
-
-        const char *mnem = (outctx->insn.itype == M68K_linef) ? "line_f" : "line_a";
-
-        outctx->out_custom_mnem(mnem);
-        return 1;
-    } break;
-    case processor_t::ev_get_idd_opinfo:
-    {
-        idd_opinfo_t * opinf = va_arg(va, idd_opinfo_t *);
-        ea_t ea = va_arg(va, ea_t);
-        int n = va_arg(va, int);
-        int thread_id = va_arg(va, int);
-        getreg_func_t getreg = va_arg(va, getreg_func_t);
-        const regval_t *regvalues = va_arg(va, const regval_t *);
-
-        opinf->ea = BADADDR;
-        opinf->debregidx = 0;
-        opinf->modified = false;
-        opinf->value.ival = 0;
-        opinf->value_size = 4;
-
-        insn_t out;
-        if (decode_insn(&out, ea))
-        {
-            op_t op = out.ops[n];
-
-#ifdef _DEBUG
-            print_insn(&out);
-#endif
-
-            int size = 0;
-            switch (op.dtype)
-            {
-            case dt_byte:
-                size = 1;
-                break;
-            case dt_word:
-                size = 2;
-                break;
-            default:
-                size = 4;
-                break;
-            }
-
-            opinf->value_size = size;
-
-            switch (op.type)
-            {
-            case o_mem:
-            case o_near:
-            case o_imm:
-            {
-                flags_t flags;
-
-                switch (n)
-                {
-                case 0: flags = get_optype_flags0(get_flags(ea)); break;
-                case 1: flags = get_optype_flags1(get_flags(ea)); break;
-                default: flags = 0; break;
-                }
-
-                switch (op.type)
-                {
-                case o_mem:
-                case o_near: opinf->ea = op.addr; break;
-                case o_imm: opinf->ea = op.value; break;
-                }
-
-                opinfo_t info;
-                if (get_opinfo(&info, ea, n, flags) != NULL)
-                {
-                    opinf->ea += info.ri.base;
-                }
-            } break;
-            case o_phrase:
-            case o_reg:
-            {
-                int reg_idx = idp_to_dbg_reg(op.reg);
-                regval_t reg = getreg(dbg->regs(reg_idx).name, regvalues);
-
-                if (op.phrase >= 0x10 && op.phrase <= 0x1F || // (A0)..(A7), (A0)+..(A7)+
-                    op.phrase >= 0x20 && op.phrase <= 0x27) // -(A0)..-(A7)
-                {
-                    if (op.phrase >= 0x20 && op.phrase <= 0x27)
-                        reg.ival -= size;
-
-                    opinf->ea = (ea_t)reg.ival;
-                    size_t read_size = 0;
-
-                    switch (size)
-                    {
-                    case 1:
-                    {
-                        uint8_t b = 0;
-                        dbg->read_memory(&read_size, (ea_t)reg.ival, &b, 1);
-                        opinf->value.ival = b;
-                    } break;
-                    case 2:
-                    {
-                        uint16_t w = 0;
-                        dbg->read_memory(&read_size, (ea_t)reg.ival, &w, 2);
-                        w = swap16(w);
-                        opinf->value.ival = w;
-                    } break;
-                    default:
-                    {
-                        uint32_t l = 0;
-                        dbg->read_memory(&read_size, (ea_t)reg.ival, &l, 4);
-                        l = swap32(l);
-                        opinf->value.ival = l;
-                    } break;
-                    }
-                }
-                else
-                    opinf->value = reg;
-
-                opinf->debregidx = reg_idx;
-            } break;
-            case o_displ:
-            {
-                regval_t main_reg, add_reg;
-                int main_reg_idx = idp_to_dbg_reg(op.reg);
-                int add_reg_idx = idp_to_dbg_reg(op.specflag1 & 0xF);
-
-                main_reg.ival = 0;
-                add_reg.ival = 0;
-                if (op.specflag2 & 0x10)
-                {
-                    add_reg = getreg(dbg->regs(add_reg_idx).name, regvalues);
-                    if (op.specflag1 & 0x10)
-                    {
-                        add_reg.ival &= 0xFFFF;
-                        add_reg.ival = (uint64)((int16_t)add_reg.ival);
-                    }
-                }
-
-                if (main_reg_idx != 16)
-                    main_reg = getreg(dbg->regs(main_reg_idx).name, regvalues);
-
-                ea_t addr = (ea_t)main_reg.ival + op.addr + (ea_t)add_reg.ival;
-                opinf->ea = addr;
-                size_t read_size = 0;
-
-                switch (size)
-                {
-                case 1:
-                {
-                    uint8_t b = 0;
-                    dbg->read_memory(&read_size, addr, &b, 1);
-                    opinf->value.ival = b;
-                } break;
-                case 2:
-                {
-                    uint16_t w = 0;
-                    dbg->read_memory(&read_size, addr, &w, 2);
-                    w = swap16(w);
-                    opinf->value.ival = w;
-                } break;
-                default:
-                {
-                    uint32_t l = 0;
-                    dbg->read_memory(&read_size, addr, &l, 4);
-                    l = swap32(l);
-                    opinf->value.ival = l;
-                } break;
-                }
-            } break;
-            }
-
-            opinf->ea &= 0xFFFFFF;
-
-            return 1;
-        }
-    } break;
-    default:
-    {
-#ifdef _DEBUG
-        if (my_dbg)
-        {
-            msg("msg = %d\n", notification_code);
-        }
-#endif
-    } break;
-    }
-    return 0;
-}
-
 //--------------------------------------------------------------------------
 static unsigned int mask(unsigned char bit_idx, unsigned char bits_cnt = 1)
 {
@@ -1113,6 +756,353 @@ static ssize_t idaapi hook_ui(void *user_data, int notification_code, va_list va
     return 0;
 }
 
+typedef const regval_t& (idaapi* getreg_func_t)(const char* name, const regval_t* regvalues);
+
+struct plugin_ctx_t : public plugmod_t, post_event_visitor_t
+{
+    bool idaapi run(size_t) override
+    {
+        return false;
+    }
+
+    ssize_t idaapi handle_post_event(ssize_t code, int notification_code, va_list va) override
+    {
+        switch (notification_code)
+        {
+        case processor_t::ev_ana_insn:
+        {
+            insn_t* out = va_arg(va, insn_t*);
+
+            uint16 itype = 0;
+            ea_t value = out->ea;
+            uchar b = get_byte(out->ea);
+
+            if (b == 0xA0 || b == 0xF0)
+            {
+                switch (b)
+                {
+                case 0xA0:
+                    itype = M68K_linea;
+                    value = get_dword(0x0A * sizeof(uint32));
+                    break;
+                case 0xF0:
+                    itype = M68K_linef;
+                    value = get_dword(0x0B * sizeof(uint32));
+                    break;
+                }
+
+                out->itype = itype;
+                out->size = 2;
+
+                out->Op1.type = o_near;
+                out->Op1.offb = 1;
+                out->Op1.dtype = dt_dword;
+                out->Op1.addr = value;
+                out->Op1.phrase = 0x0A;
+                out->Op1.specflag1 = 2;
+
+                out->Op2.type = o_imm;
+                out->Op2.offb = 1;
+                out->Op2.dtype = dt_byte;
+                out->Op2.value = get_byte(out->ea + 1);
+            }
+
+#ifdef _DEBUG
+            print_insn(out);
+#endif
+
+            for (int i = 0; i < UA_MAXOP; ++i)
+            {
+                op_t& op = out->ops[i];
+
+#ifdef _DEBUG
+                print_op(out->ea, &op);
+#endif
+
+                switch (op.type)
+                {
+                case o_near:
+                case o_mem:
+                {
+                    op.addr &= 0xFFFFFF; // for any mirrors
+
+                    if ((op.addr & 0xE00000) == 0xE00000) // RAM mirrors
+                        op.addr |= 0x1F0000;
+
+                    if ((op.addr >= 0xC00000 && op.addr <= 0xC0001F) ||
+                        (op.addr >= 0xC00020 && op.addr <= 0xC0003F)) // VDP mirrors
+                        op.addr &= 0xC000FF;
+
+                    if (out->itype == 0x75 && op.n == 0 && op.phrase == 9 && (op.addr & 0xFFFF0000) == 0xFF0000)
+                    {
+                        op.type = o_mem;
+                        //op.specflag1 = 1;
+                    }
+                    else if ((out->itype == 0x76 || out->itype == 0x75 || out->itype == 0x74) && op.n == 0 &&
+                        (op.phrase == 0x09 || op.phrase == 0x0A) &&
+                        (op.addr != 0 && op.addr <= 0xA00000) &&
+                        op.specflag1 == 2) // lea table(pc),Ax; jsr func(pc); jmp label(pc)
+                    {
+                        short diff = op.addr - value;
+                        if (diff >= SHRT_MIN && diff <= SHRT_MAX)
+                        {
+                            out->Op1.type = o_displ;
+                            out->Op1.offb = 2;
+                            out->Op1.dtype = dt_dword;
+                            out->Op1.phrase = 0x5B;
+                            out->Op1.specflag1 = 0x10;
+                        }
+                    }
+                } break;
+                }
+            }
+
+            return out->size;
+        } break;
+        case processor_t::ev_emu_insn:
+        {
+            insn_t* insn = va_arg(va, insn_t*);
+            if (insn->itype == 0xB6) // trap #X
+            {
+                qstring name;
+                ea_t trap_addr = get_dword((0x20 + (insn->Op1.value & 0xF)) * sizeof(uint32));
+                get_func_name(&name, trap_addr);
+                set_cmt(insn->ea, name.c_str(), false);
+                insn->add_cref(trap_addr, insn->Op1.offb, fl_CN);
+
+                if (func_does_return(trap_addr)) {
+                    func_t* trap_func = get_func(trap_addr);
+                    int argsize = (trap_func != nullptr) ? trap_func->argsize : 0;
+                    insn->add_cref(insn->ea + 2 + argsize, 0, fl_F); // calc next insn
+                }
+
+                return 1;
+            }
+
+            if ((insn->itype == 0x76 || insn->itype == 0x75 || insn->itype == 0x74) &&
+                insn->Op1.phrase == 0x5B && insn->Op1.specflag1 == 0x10) // lea table(pc),Ax; jsr func(pc); jmp label(pc)
+            {
+                short diff = insn->Op1.addr - insn->ea;
+                if (diff >= SHRT_MIN && diff <= SHRT_MAX)
+                {
+                    insn->add_dref(insn->Op1.addr, insn->Op1.offb, dr_O);
+
+                    if (insn->itype != 0x74) {
+                        insn->add_cref(insn->ea + insn->size, 0, fl_F);
+                    }
+
+                    return 1;
+                }
+            }
+
+            if (insn->itype == M68K_linea || insn->itype == M68K_linef)
+            {
+                insn->add_cref(insn->Op1.addr, 0, fl_CN);
+                insn->add_cref(insn->ea + insn->size, insn->Op1.offb, fl_F);
+                return 1;
+            }
+
+            if (insn->itype == 0x7F && insn->Op1.type == o_imm && insn->Op1.value & 0xFF0000 && insn->Op1.dtype == dt_word) { // movea
+                insn->Op1.value &= 0xFFFF;
+
+                op_offset(insn->ea, insn->Op1.n, REF_OFF32, BADADDR, 0xFF0000);
+                insn->add_cref(insn->ea + insn->size, insn->Op1.offb, fl_F);
+                return 1;
+            }
+        } break;
+        case processor_t::ev_out_mnem:
+        {
+            outctx_t* outctx = va_arg(va, outctx_t*);
+            if (outctx->insn.itype != M68K_linea && outctx->insn.itype != M68K_linef)
+                break;
+
+            const char* mnem = (outctx->insn.itype == M68K_linef) ? "line_f" : "line_a";
+
+            outctx->out_custom_mnem(mnem);
+            return 1;
+        } break;
+        case processor_t::ev_get_idd_opinfo:
+        {
+            idd_opinfo_t* opinf = va_arg(va, idd_opinfo_t*);
+            ea_t ea = va_arg(va, ea_t);
+            int n = va_arg(va, int);
+            int thread_id = va_arg(va, int);
+            getreg_func_t getreg = va_arg(va, getreg_func_t);
+            const regval_t* regvalues = va_arg(va, const regval_t*);
+
+            opinf->ea = BADADDR;
+            opinf->debregidx = 0;
+            opinf->modified = false;
+            opinf->value.ival = 0;
+            opinf->value_size = 4;
+
+            insn_t out;
+            if (decode_insn(&out, ea))
+            {
+                op_t op = out.ops[n];
+
+#ifdef _DEBUG
+                print_insn(&out);
+#endif
+
+                int size = 0;
+                switch (op.dtype)
+                {
+                case dt_byte:
+                    size = 1;
+                    break;
+                case dt_word:
+                    size = 2;
+                    break;
+                default:
+                    size = 4;
+                    break;
+                }
+
+                opinf->value_size = size;
+
+                switch (op.type)
+                {
+                case o_mem:
+                case o_near:
+                case o_imm:
+                {
+                    flags_t flags;
+
+                    switch (n)
+                    {
+                    case 0: flags = get_optype_flags0(get_flags(ea)); break;
+                    case 1: flags = get_optype_flags1(get_flags(ea)); break;
+                    default: flags = 0; break;
+                    }
+
+                    switch (op.type)
+                    {
+                    case o_mem:
+                    case o_near: opinf->ea = op.addr; break;
+                    case o_imm: opinf->ea = op.value; break;
+                    }
+
+                    opinfo_t info;
+                    if (get_opinfo(&info, ea, n, flags) != NULL)
+                    {
+                        opinf->ea += info.ri.base;
+                    }
+                } break;
+                case o_phrase:
+                case o_reg:
+                {
+                    int reg_idx = idp_to_dbg_reg(op.reg);
+                    regval_t reg = getreg(dbg->regs(reg_idx).name, regvalues);
+
+                    if (op.phrase >= 0x10 && op.phrase <= 0x1F || // (A0)..(A7), (A0)+..(A7)+
+                        op.phrase >= 0x20 && op.phrase <= 0x27) // -(A0)..-(A7)
+                    {
+                        if (op.phrase >= 0x20 && op.phrase <= 0x27)
+                            reg.ival -= size;
+
+                        opinf->ea = (ea_t)reg.ival;
+                        size_t read_size = 0;
+
+                        switch (size)
+                        {
+                        case 1:
+                        {
+                            uint8_t b = 0;
+                            dbg->read_memory(&read_size, (ea_t)reg.ival, &b, 1);
+                            opinf->value.ival = b;
+                        } break;
+                        case 2:
+                        {
+                            uint16_t w = 0;
+                            dbg->read_memory(&read_size, (ea_t)reg.ival, &w, 2);
+                            w = swap16(w);
+                            opinf->value.ival = w;
+                        } break;
+                        default:
+                        {
+                            uint32_t l = 0;
+                            dbg->read_memory(&read_size, (ea_t)reg.ival, &l, 4);
+                            l = swap32(l);
+                            opinf->value.ival = l;
+                        } break;
+                        }
+                    }
+                    else
+                        opinf->value = reg;
+
+                    opinf->debregidx = reg_idx;
+                } break;
+                case o_displ:
+                {
+                    regval_t main_reg, add_reg;
+                    int main_reg_idx = idp_to_dbg_reg(op.reg);
+                    int add_reg_idx = idp_to_dbg_reg(op.specflag1 & 0xF);
+
+                    main_reg.ival = 0;
+                    add_reg.ival = 0;
+                    if (op.specflag2 & 0x10)
+                    {
+                        add_reg = getreg(dbg->regs(add_reg_idx).name, regvalues);
+                        if (op.specflag1 & 0x10)
+                        {
+                            add_reg.ival &= 0xFFFF;
+                            add_reg.ival = (uint64)((int16_t)add_reg.ival);
+                        }
+                    }
+
+                    if (main_reg_idx != 16)
+                        main_reg = getreg(dbg->regs(main_reg_idx).name, regvalues);
+
+                    ea_t addr = (ea_t)main_reg.ival + op.addr + (ea_t)add_reg.ival;
+                    opinf->ea = addr;
+                    size_t read_size = 0;
+
+                    switch (size)
+                    {
+                    case 1:
+                    {
+                        uint8_t b = 0;
+                        dbg->read_memory(&read_size, addr, &b, 1);
+                        opinf->value.ival = b;
+                    } break;
+                    case 2:
+                    {
+                        uint16_t w = 0;
+                        dbg->read_memory(&read_size, addr, &w, 2);
+                        w = swap16(w);
+                        opinf->value.ival = w;
+                    } break;
+                    default:
+                    {
+                        uint32_t l = 0;
+                        dbg->read_memory(&read_size, addr, &l, 4);
+                        l = swap32(l);
+                        opinf->value.ival = l;
+                    } break;
+                    }
+                } break;
+                }
+
+                opinf->ea &= 0xFFFFFF;
+
+                return 1;
+            }
+        } break;
+        default:
+        {
+#ifdef _DEBUG
+            if (my_dbg)
+            {
+                msg("msg = %d\n", notification_code);
+            }
+#endif
+        } break;
+        }
+        return code;
+    }
+} ctx;
+
 //--------------------------------------------------------------------------
 // Initialize debugger plugin
 static plugmod_t * idaapi init(void)
@@ -1126,7 +1116,7 @@ static plugmod_t * idaapi init(void)
         bool res = register_action(smd_constant_action);
 
         hook_to_notification_point(HT_UI, hook_ui, NULL);
-        hook_to_notification_point(HT_IDP, hook_idp, NULL);
+        register_post_event_visitor(HT_IDP, &ctx, nullptr);
 
         print_version();
         return PLUGIN_KEEP;
@@ -1141,7 +1131,7 @@ static void idaapi term(void)
     if (plugin_inited)
     {
         unhook_from_notification_point(HT_UI, hook_ui);
-        unhook_from_notification_point(HT_IDP, hook_idp);
+        unregister_post_event_visitor(HT_IDP, &ctx);
 
         unregister_action(smd_constant_name);
 
