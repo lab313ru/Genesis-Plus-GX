@@ -1610,6 +1610,13 @@ LRESULT CALLBACK VDPRamProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         VDPRamHWnd = NULL;
         PostQuitMessage(0);
         EndDialog(hDlg, 0);
+        
+        if (hThread) {
+            TerminateThread(hThread, 0);
+            CloseHandle(hThread);
+            hThread = 0;
+        }
+
         return TRUE;
     } break;
     }
@@ -1624,6 +1631,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
     VDPRamHWnd = CreateDialog(dbg_wnd_hinst, MAKEINTRESOURCE(IDD_VDPRAM), dbg_window, (DLGPROC)VDPRamProc);
     ShowWindow(VDPRamHWnd, SW_SHOW);
     UpdateWindow(VDPRamHWnd);
+    SetForegroundWindow(VDPRamHWnd);
 
     HANDLE hMutex = CreateMutex(NULL, FALSE, VDP_RAM_MUTEX);
 
@@ -1643,18 +1651,30 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
 void create_vdp_ram_debug()
 {
-    hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
+    if (VDPRamHWnd == NULL) {
+        hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
+    }
+    else {
+        SetForegroundWindow(VDPRamHWnd);
+    }
 }
 
 void destroy_vdp_ram_debug()
 {
-    SendMessage(VDPRamHWnd, WM_CLOSE, 0, 0);
+    if (VDPRamHWnd) {
+        SendMessage(VDPRamHWnd, WM_CLOSE, 0, 0);
+    }
 
-    CloseHandle(hThread);
+    if (hThread) {
+        TerminateThread(hThread, 0);
+        CloseHandle(hThread);
+        hThread = 0;
+    }
 }
 
 void update_vdp_ram_debug()
 {
-    if (VDPRamHWnd)
+    if (VDPRamHWnd) {
         SendMessage(VDPRamHWnd, UpdateMSG, 0, 0);
+    }
 }

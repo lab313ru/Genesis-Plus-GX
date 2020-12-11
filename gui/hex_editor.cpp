@@ -1038,6 +1038,13 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         HexDestroyDialog(Hex);
         UnregisterClass("HEXEDITOR", dbg_wnd_hinst);
         PostQuitMessage(0);
+
+        if (hThread) {
+            TerminateThread(hThread, 0);
+            CloseHandle(hThread);
+            hThread = 0;
+        }
+
         return FALSE;
     }
     return DefWindowProc(hDlg, uMsg, wParam, lParam);
@@ -1107,19 +1114,30 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
 void create_hex_editor()
 {
-    hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
+    if (HexEditorHwnd == NULL) {
+        hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
+    }
+    else {
+        SetForegroundWindow(HexEditorHwnd);
+    }
 }
 
 void destroy_hex_editor()
 {
-    SendMessage(HexEditorHwnd, WM_CLOSE, 0, 0);
+    if (HexEditorHwnd) {
+        SendMessage(HexEditorHwnd, WM_CLOSE, 0, 0);
+    }
 
-    TerminateThread(hThread, 0);
-    CloseHandle(hThread);
+    if (hThread) {
+        TerminateThread(hThread, 0);
+        CloseHandle(hThread);
+        hThread = 0;
+    }
 }
 
 void update_hex_editor()
 {
-    if (HexEditorHwnd)
+    if (HexEditorHwnd) {
         HexUpdateDialog(&HexEditor, 0);
+    }
 }

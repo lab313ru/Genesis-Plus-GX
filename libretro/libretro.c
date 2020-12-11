@@ -46,7 +46,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "gui.h"
+#include "plane_explorer.h"
+#include "vdp_ram_debug.h"
+#include "hex_editor.h"
 
 #include "debug.h"
 jmp_buf jmp_env;
@@ -2761,6 +2763,61 @@ static void check_system_specs(void)
    environ_cb(RETRO_ENVIRONMENT_SET_PERFORMANCE_LEVEL, &level);
 }
 
+static int menu_created = 0;
+static HMENU dbgMenu = NULL;
+static HHOOK dbgMenuHook = NULL;
+extern HINSTANCE GetHInstance();
+
+#define IDM_DBG_PLANE_EXPLORER (0x666 + 1)
+#define IDM_DBG_VDP_RAM (0x666 + 2)
+#define IDM_DBG_HEX_EDITOR (0x666 + 3)
+
+
+LRESULT CALLBACK dbgMenuHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (nCode == HC_ACTION) {
+#define msg ((PMSG)lParam)
+
+        switch (msg->message) {
+        case WM_COMMAND: {
+            switch (LOWORD(msg->wParam)) {
+            case IDM_DBG_PLANE_EXPLORER: {
+                create_plane_explorer();
+            } break;
+            case IDM_DBG_VDP_RAM: {
+                create_vdp_ram_debug();
+            } break;
+            case IDM_DBG_HEX_EDITOR: {
+                create_hex_editor();
+            } break;
+            }
+        } break;
+        }
+
+#undef msg
+    }
+
+    return CallNextHookEx(NULL, nCode, wParam, lParam);
+}
+
+static void create_menu_items() {
+    HWND rarch = FindWindowExA(NULL, NULL, "RetroArch", NULL);
+
+    if (rarch == NULL) {
+        return;
+    }
+
+    HMENU rmenu = GetMenu(rarch);
+    dbgMenu = CreatePopupMenu();
+
+    AppendMenuA(rmenu, MF_POPUP, dbgMenu, "&Debug");
+    AppendMenuA(dbgMenu, MF_STRING | MF_ENABLED, IDM_DBG_HEX_EDITOR, "&Hex Editor");
+    AppendMenuA(dbgMenu, MF_STRING | MF_ENABLED, IDM_DBG_VDP_RAM, "&VDP Ram");
+    AppendMenuA(dbgMenu, MF_STRING | MF_ENABLED, IDM_DBG_PLANE_EXPLORER, "&Plane Explorer");
+
+    HINSTANCE rinst = GetHInstance();
+    dbgMenuHook = SetWindowsHookExA(WH_GETMESSAGE, dbgMenuHookProc, rinst, 0);
+}
+
 void retro_init(void)
 {
    struct retro_log_callback log;
@@ -2783,6 +2840,9 @@ void retro_init(void)
 void retro_deinit(void)
 {
     stop_debugging();
+
+    UnhookWindowsHookEx(dbgMenuHook);
+    DestroyMenu(dbgMenu);
 }
 
 void retro_reset(void)
@@ -2796,6 +2856,11 @@ void retro_reset(void)
 
 void retro_run(void) 
 {
+   if (!menu_created) {
+       create_menu_items();
+       menu_created = 1;
+   }
+
    if (is_debugger_paused())
    {
        longjmp(jmp_env, 1);
