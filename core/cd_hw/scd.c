@@ -1306,6 +1306,13 @@ static void scd_write_word(unsigned int address, unsigned int data)
       return;
     }
 
+    case 0x36: /* CDD control */
+    {
+      /* only bit 2 is writable (bits [1:0] forced to 0 by default) */
+      scd.regs[0x37>>1].byte.l = data & 0x04;
+      return;
+    }
+
     case 0x4a: /* CDD command 9 (controlled by BIOS, word access only ?) */
     {
       scd.regs[0x4a>>1].w = 0;
@@ -1557,7 +1564,6 @@ void scd_init(void)
 
 void scd_reset(int hard)
 {
-  /* TODO: figure what exactly is resetted when RESET bit is cleared by SUB-CPU */
   if (hard)
   {
     /* Clear all ASIC registers by default */
@@ -1605,8 +1611,11 @@ void scd_reset(int hard)
   }
   else
   {
-    /* Clear only SUB-CPU side registers */
-    memset(&scd.regs[0x04>>1], 0, sizeof(scd.regs) - 4);
+    /* TODO: figure what exactly is reset when RESET bit is cleared by SUB-CPU */
+    /* Clear only SUB-CPU side registers (communication registers are not cleared, see msu-md-sample.bin) */
+    scd.regs[0x04>>1].w = 0x0000;
+    scd.regs[0x0c>>1].w = 0x0000;
+    memset(&scd.regs[0x30>>1], 0, sizeof(scd.regs) - 0x30);
   }
 
   /* SUB-CPU side default values */
