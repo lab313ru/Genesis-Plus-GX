@@ -11,13 +11,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\core\debug\debug_wrap.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ida\ida_debug.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\ida\ida_plugin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\core\debug\debug_wrap.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

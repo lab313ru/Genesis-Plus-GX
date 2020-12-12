@@ -152,10 +152,6 @@ static void init_bpt_list()
 
 static void send_dbg_event(unsigned int address, dbg_event_type_t type)
 {
-    dbg_req->dbg_events_dis[dbg_req->dbg_events_count_dis].pc = address;
-    dbg_req->dbg_events_dis[dbg_req->dbg_events_count_dis].type = type;
-    dbg_req->dbg_events_count_dis += 1;
-
     dbg_req->dbg_events_ida[dbg_req->dbg_events_count_ida].pc = address;
     dbg_req->dbg_events_ida[dbg_req->dbg_events_count_ida].type = type;
     dbg_req->dbg_events_count_ida += 1;

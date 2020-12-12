@@ -4,8 +4,8 @@
 extern "C" {
 #endif
 
-void create_disassembler();
-void destroy_disassembler();
+void create_breakpoints_window();
+void destroy_breakpoints_window();
 
 #ifdef __cplusplus
 }

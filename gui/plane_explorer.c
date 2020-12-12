@@ -608,7 +608,6 @@ BOOL CALLBACK PlaneExplorerDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LP
         EndDialog(hwnd, 0);
 
         if (hThread) {
-            TerminateThread(hThread, 0);
             CloseHandle(hThread);
             hThread = 0;
         }
@@ -685,7 +684,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
     MSG msg;
 
-    PlaneExplorerHWnd = CreateDialog(dbg_wnd_hinst, MAKEINTRESOURCE(IDD_PLANEEXPLORER), dbg_window, (DLGPROC)PlaneExplorerDialogProc);
+    PlaneExplorerHWnd = CreateDialog(pinst, MAKEINTRESOURCE(IDD_PLANEEXPLORER), rarch, (DLGPROC)PlaneExplorerDialogProc);
     ShowWindow(PlaneExplorerHWnd, SW_SHOW);
     UpdateWindow(PlaneExplorerHWnd);
     SetForegroundWindow(PlaneExplorerHWnd);
@@ -710,9 +709,6 @@ void create_plane_explorer()
 {
     if (PlaneExplorerHWnd == NULL) {
         hThread = CreateThread(0, 0, ThreadProc, NULL, 0, NULL);
-    }
-    else {
-        SetForegroundWindow(PlaneExplorerHWnd);
     }
 }
 

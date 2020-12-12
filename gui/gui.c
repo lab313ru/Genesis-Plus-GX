@@ -9,20 +9,13 @@
 
 #include "gui.h"
 
-#ifdef _WIN32
-#include "plane_explorer.h"
-#include "vdp_ram_debug.h"
-#include "hex_editor.h"
-#include "disassembler.h"
-#endif
-
 #include "cpuhook.h"
 #include "debug.h"
 
 #ifdef _WIN32
 static HANDLE hThread;
-HWND dbg_window = NULL;
-HINSTANCE dbg_wnd_hinst = NULL;
+HINSTANCE pinst = NULL;
+HWND rarch = NULL;
 
 static ACTCTX actCtx;
 static HANDLE hActCtx;
@@ -47,7 +40,7 @@ static void enable_visual_styles()
 {
     ZeroMemory(&actCtx, sizeof(actCtx));
     actCtx.cbSize = sizeof(actCtx);
-    actCtx.hModule = dbg_wnd_hinst;
+    actCtx.hModule = pinst;
     actCtx.lpResourceName = MAKEINTRESOURCE(2);
     actCtx.dwFlags = ACTCTX_FLAG_HMODULE_VALID | ACTCTX_FLAG_RESOURCE_NAME_VALID;
 
@@ -110,7 +103,7 @@ int select_file_save(char *Dest, const char *Dir, const char *Titre, const char 
 
     ofn.lStructSize = sizeof(OPENFILENAME);
     ofn.hwndOwner = hwnd;
-    ofn.hInstance = dbg_wnd_hinst;
+    ofn.hInstance = pinst;
     ofn.lpstrFile = Dest;
     ofn.nMaxFile = 2047;
     ofn.lpstrFilter = Filter;
@@ -139,7 +132,7 @@ int select_file_load(char *Dest, const char *Dir, const char *Titre, const char 
 
     ofn.lStructSize = sizeof(OPENFILENAME);
     ofn.hwndOwner = hwnd;
-    ofn.hInstance = dbg_wnd_hinst;
+    ofn.hInstance = pinst;
     ofn.lpstrFile = Dest;
     ofn.nMaxFile = 2047;
     ofn.lpstrFilter = Filter;
@@ -182,9 +175,6 @@ static void update_windows(void *data)
 void run_gui()
 {
 #ifdef _WIN32
-    dbg_wnd_hinst = GetHInstance();
-
-    InitCommonControls();
     enable_visual_styles();
 
     create_plane_explorer();
@@ -210,7 +200,7 @@ void run_gui()
 #endif
 
 #ifdef _WIN32
-    create_disassembler();
+    create_breakpoints_window();
 #endif
 }
 
@@ -226,7 +216,7 @@ void stop_gui()
     set_cpu_hook(NULL);
 
 #ifdef _WIN32
-    destroy_disassembler();
+    destroy_breakpoints_window();
 
     disable_visual_styles();
 #endif

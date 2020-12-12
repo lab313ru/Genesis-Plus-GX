@@ -65,31 +65,6 @@ void close_shared_mem(dbg_request_t **request)
 #endif
 }
 
-int recv_dbg_event_dis(dbg_request_t *request, int wait)
-{
-    while (request->dbg_active || request->dbg_events_count_dis)
-    {
-        for (int i = 0; i < MAX_DBG_EVENTS; ++i)
-        {
-            if (request->dbg_events_dis[i].type != DBG_EVT_NO_EVENT)
-            {
-                request->dbg_events_count_dis -= 1;
-                return i;
-            }
-        }
-
-        if (!wait)
-            return -1;
-#ifdef _WIN32
-        Sleep(10);
-#else
-        usleep(10 * 1000);
-#endif
-    }
-
-    return -1;
-}
-
 int recv_dbg_event_ida(dbg_request_t* request, int wait)
 {
     while (request->dbg_active || request->dbg_events_count_ida)

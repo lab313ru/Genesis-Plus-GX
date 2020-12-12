@@ -766,7 +766,7 @@ INT_PTR msgRegistersWM_INITDIALOG(HWND hDlg, WPARAM wparam, LPARAM lparam)
         //Create the dialog window for this tab
         DLGPROC dialogWindowProc = tabItems[i].dialogProc;
         LPCSTR dialogTemplateName = MAKEINTRESOURCE(tabItems[i].dialogID);
-        tabItems[i].hwndDialog = CreateDialogParam(dbg_wnd_hinst, dialogTemplateName, GetDlgItem(hDlg, IDC_VDP_REGISTERS_TABCONTROL), dialogWindowProc, (LPARAM)1);
+        tabItems[i].hwndDialog = CreateDialogParam(pinst, dialogTemplateName, GetDlgItem(hDlg, IDC_VDP_REGISTERS_TABCONTROL), dialogWindowProc, (LPARAM)1);
 
         //Calculate the required size of the window for this tab in pixel units
         RECT rect;
@@ -1129,7 +1129,7 @@ LRESULT CALLBACK VDPRamProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
         memset(&r, 0, sizeof(r));
 
-        GetWindowRect(dbg_window, &r);
+        GetWindowRect(rarch, &r);
         dx1 = (r.right - r.left) / 2;
         dy1 = (r.bottom - r.top) / 2;
 
@@ -1612,7 +1612,6 @@ LRESULT CALLBACK VDPRamProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         EndDialog(hDlg, 0);
         
         if (hThread) {
-            TerminateThread(hThread, 0);
             CloseHandle(hThread);
             hThread = 0;
         }
@@ -1628,7 +1627,7 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
     MSG msg;
 
-    VDPRamHWnd = CreateDialog(dbg_wnd_hinst, MAKEINTRESOURCE(IDD_VDPRAM), dbg_window, (DLGPROC)VDPRamProc);
+    VDPRamHWnd = CreateDialog(pinst, MAKEINTRESOURCE(IDD_VDPRAM), rarch, (DLGPROC)VDPRamProc);
     ShowWindow(VDPRamHWnd, SW_SHOW);
     UpdateWindow(VDPRamHWnd);
     SetForegroundWindow(VDPRamHWnd);
@@ -1653,9 +1652,6 @@ void create_vdp_ram_debug()
 {
     if (VDPRamHWnd == NULL) {
         hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
-    }
-    else {
-        SetForegroundWindow(VDPRamHWnd);
     }
 }
 

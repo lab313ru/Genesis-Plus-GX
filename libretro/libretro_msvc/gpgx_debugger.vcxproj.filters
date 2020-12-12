@@ -408,9 +408,6 @@
     <ClCompile Include="..\scrc32.c">
       <Filter>libretro</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\core\debug\debug.c">
-      <Filter>core\debug</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\gui\gui.c">
       <Filter>gui</Filter>
     </ClCompile>
@@ -423,19 +420,22 @@
     <ClCompile Include="..\..\gui\hex_editor.cpp">
       <Filter>gui\hex_editor</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\gui\disasembler.cpp">
-      <Filter>gui\disassembler</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\gui\edit_fields.cpp">
       <Filter>gui\edit_fields</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\core\debug\debug_wrap.c">
-      <Filter>core\debug</Filter>
     </ClCompile>
     <ClCompile Include="..\..\core\sound\opll.c">
       <Filter>core\sound</Filter>
     </ClCompile>
     <ClCompile Include="..\..\core\debug\cpuhook.c">
+      <Filter>core\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\gui\breakpoints.cpp">
+      <Filter>gui\disassembler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\core\debug\debug.c">
+      <Filter>core\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\core\debug\debug_wrap.c">
       <Filter>core\debug</Filter>
     </ClCompile>
   </ItemGroup>
@@ -818,9 +818,6 @@
     <ClInclude Include="..\..\gui\hex_editor.h">
       <Filter>gui\hex_editor</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\gui\disassembler.h">
-      <Filter>gui\disassembler</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\gui\edit_fields.h">
       <Filter>gui\edit_fields</Filter>
     </ClInclude>
@@ -836,11 +833,9 @@
     <ClInclude Include="..\..\core\debug\cpuhook.h">
       <Filter>core\debug</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Manifest Include="..\..\gui\gui.manifest">
-      <Filter>gui\resource</Filter>
-    </Manifest>
+    <ClInclude Include="..\..\gui\breakpoints.h">
+      <Filter>gui\disassembler</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\gui\gui.rc">
@@ -851,5 +846,10 @@
     <Image Include="..\..\gui\gens2.ico">
       <Filter>gui\resource</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="..\..\gui\gui.manifest">
+      <Filter>gui\resource</Filter>
+    </Manifest>
   </ItemGroup>
 </Project>

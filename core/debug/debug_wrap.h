@@ -247,13 +247,10 @@ typedef struct {
     register_data_t regs_data;
     memory_data_t mem_data;
     bpt_data_t bpt_data;
-    int dbg_events_count_dis;
     int dbg_events_count_ida;
-    debugger_event_t dbg_events_dis[MAX_DBG_EVENTS];
     debugger_event_t dbg_events_ida[MAX_DBG_EVENTS];
     bpt_list_t bpt_list;
     int dbg_active, dbg_paused;
-    int is_ida;
 } dbg_request_t;
 #pragma pack(pop)
 

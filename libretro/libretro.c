@@ -46,9 +46,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "plane_explorer.h"
-#include "vdp_ram_debug.h"
-#include "hex_editor.h"
+#include "gui.h"
 
 #include "debug.h"
 jmp_buf jmp_env;
@@ -1429,7 +1427,6 @@ static void check_variables(void)
           if (is_debugger_accessible())
           {
               stop_debugging();
-              stop_gui();
               deactivate_shared_mem();
           }
       }
@@ -1437,7 +1434,6 @@ static void check_variables(void)
       {
           activate_shared_mem();
           start_debugging();
-          run_gui();
       }
   }
 
@@ -2771,6 +2767,7 @@ extern HINSTANCE GetHInstance();
 #define IDM_DBG_PLANE_EXPLORER (0x666 + 1)
 #define IDM_DBG_VDP_RAM (0x666 + 2)
 #define IDM_DBG_HEX_EDITOR (0x666 + 3)
+#define IDM_DBG_BREAKPOINTS (0x666 + 4)
 
 
 LRESULT CALLBACK dbgMenuHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -2789,6 +2786,9 @@ LRESULT CALLBACK dbgMenuHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
             case IDM_DBG_HEX_EDITOR: {
                 create_hex_editor();
             } break;
+            case IDM_DBG_BREAKPOINTS: {
+                create_breakpoints_window();
+            } break;
             }
         } break;
         }
@@ -2800,7 +2800,7 @@ LRESULT CALLBACK dbgMenuHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 static void create_menu_items() {
-    HWND rarch = FindWindowExA(NULL, NULL, "RetroArch", NULL);
+    rarch = FindWindowExA(NULL, NULL, "RetroArch", NULL);
 
     if (rarch == NULL) {
         return;
@@ -2809,13 +2809,16 @@ static void create_menu_items() {
     HMENU rmenu = GetMenu(rarch);
     dbgMenu = CreatePopupMenu();
 
-    AppendMenuA(rmenu, MF_POPUP, dbgMenu, "&Debug");
+    AppendMenuA(rmenu, MF_POPUP, (UINT_PTR)dbgMenu, "&Debug");
     AppendMenuA(dbgMenu, MF_STRING | MF_ENABLED, IDM_DBG_HEX_EDITOR, "&Hex Editor");
+    AppendMenuA(dbgMenu, MF_STRING | MF_ENABLED, IDM_DBG_BREAKPOINTS, "&Breakpoints");
     AppendMenuA(dbgMenu, MF_STRING | MF_ENABLED, IDM_DBG_VDP_RAM, "&VDP Ram");
     AppendMenuA(dbgMenu, MF_STRING | MF_ENABLED, IDM_DBG_PLANE_EXPLORER, "&Plane Explorer");
 
-    HINSTANCE rinst = GetHInstance();
-    dbgMenuHook = SetWindowsHookExA(WH_GETMESSAGE, dbgMenuHookProc, rinst, 0);
+    pinst = GetHInstance();
+    dbgMenuHook = SetWindowsHookExA(WH_GETMESSAGE, dbgMenuHookProc, pinst, 0);
+
+    run_gui();
 }
 
 void retro_init(void)
@@ -2843,6 +2846,8 @@ void retro_deinit(void)
 
     UnhookWindowsHookEx(dbgMenuHook);
     DestroyMenu(dbgMenu);
+
+    stop_gui();
 }
 
 void retro_reset(void)

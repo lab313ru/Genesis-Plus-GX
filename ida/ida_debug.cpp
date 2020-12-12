@@ -176,7 +176,6 @@ static drc_t idaapi term_debugger(void)
 {
     if (dbg_req)
     {
-        dbg_req->is_ida = 0;
         close_shared_mem(&dbg_req);
     }
     return DRC_OK;
@@ -186,8 +185,6 @@ static int idaapi check_debugger_events(void *ud)
 {
     while (dbg_req->dbg_active || dbg_req->dbg_events_count_ida)
     {
-        dbg_req->is_ida = 1;
-
         int event_index = recv_dbg_event_ida(dbg_req, 0);
         if (event_index == -1)
         {
