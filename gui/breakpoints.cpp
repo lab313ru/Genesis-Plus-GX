@@ -1,23 +1,13 @@
 #include <Windows.h>
 #include <CommCtrl.h>
-//#include <process.h>
 #include <string>
-//#include <vector>
-//#include <map>
-//#include <sstream>
-//#include <iomanip>
-//#include <algorithm>
-//#include <regex>
-//#include <list>
 
 #include "gui.h"
 #include "breakpoints.h"
-
 #include "edit_fields.h"
+#include "debug_wrap.h"
 
 #include "resource.h"
-
-#include "debug_wrap.h"
 
 
 #define DBG_EVENTS_TIMER 1
