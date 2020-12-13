@@ -12,7 +12,6 @@
 
 #define DBG_EVENTS_TIMER 1
 
-static dbg_request_t *dbg_req = NULL;
 static HANDLE hThread = NULL;
 
 static HWND bptsHwnd = NULL;

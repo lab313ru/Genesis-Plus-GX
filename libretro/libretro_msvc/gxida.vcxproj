@@ -59,16 +59,16 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>__NT__;__IDP__;__X64__;WIN32;_DEBUG;GXIDA_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__NT__;__IDP__;__X64__;QT_CORE_LIB;QT_DLL;QT_GUI_LIB;QT_NAMESPACE=QT;QT_THREAD_SUPPORT;QT_WIDGETS_LIB;WIN32;_DEBUG;GXIDA_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>d:\idasdk75\include;../../core/debug;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>d:\idasdk75\include;c:\Qt\5.6.3-x64\include;c:\Qt\5.6.3-x64\include\QtGui;c:\Qt\5.6.3-x64\include\QtWidgets;../../core/debug;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>d:\idasdk75\lib\x64_win_vc_32\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ida.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>d:\idasdk75\lib\x64_win_vc_32\;d:\idasdk75\lib\x64_win_qt\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ida.lib;Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -79,7 +79,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;__NT__;__IDP__;__X64__;NDEBUG;GXIDA_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>d:\idasdk75\include;../../core/debug;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>d:\idasdk75\include;c:\Qt\5.6.3-x64\include;c:\Qt\5.6.3-x64\include\QtGui;c:\Qt\5.6.3-x64\include\QtWidgets;../../core/debug;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -87,17 +87,23 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>d:\idasdk75\lib\x64_win_vc_32\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ida.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>d:\idasdk75\lib\x64_win_vc_32\;d:\idasdk75\lib\x64_win_qt\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ida.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\core\debug\debug_wrap.c" />
     <ClCompile Include="..\..\ida\ida_debug.cpp" />
     <ClCompile Include="..\..\ida\ida_plugin.cpp" />
+    <ClCompile Include="..\..\ida\moc_bpts_window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\core\debug\debug_wrap.h" />
+    <CustomBuild Include="..\..\ida\bpts_window.h">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">c:\Qt\5.6.3-x64\bin\moc.exe "%(FullPath)" -o "%(RootDir)%(Directory)moc_%(Filename).cpp"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling %(Filename).%(Extension) using MOC</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(RootDir)%(Directory)moc_%(Filename).cpp;%(Outputs)</Outputs>
+    </CustomBuild>
     <ClInclude Include="..\..\ida\ida_debmod.h" />
     <ClInclude Include="..\..\ida\ida_plugin.h" />
   </ItemGroup>

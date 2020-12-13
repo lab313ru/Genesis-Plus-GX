@@ -97,9 +97,6 @@
     <Filter Include="gui\hex_editor">
       <UniqueIdentifier>{227ec897-c285-4e56-a733-5fdc4b368403}</UniqueIdentifier>
     </Filter>
-    <Filter Include="gui\disassembler">
-      <UniqueIdentifier>{4a4a8f2f-5242-4d2a-ab98-b9cb1137721e}</UniqueIdentifier>
-    </Filter>
     <Filter Include="gui\edit_fields">
       <UniqueIdentifier>{6ce1585d-5253-448c-aee1-1ecde860dca4}</UniqueIdentifier>
     </Filter>
@@ -428,9 +425,6 @@
     </ClCompile>
     <ClCompile Include="..\..\core\debug\cpuhook.c">
       <Filter>core\debug</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\gui\breakpoints.cpp">
-      <Filter>gui\disassembler</Filter>
     </ClCompile>
     <ClCompile Include="..\..\core\debug\debug.c">
       <Filter>core\debug</Filter>
@@ -832,9 +826,6 @@
     </ClInclude>
     <ClInclude Include="..\..\core\debug\cpuhook.h">
       <Filter>core\debug</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\gui\breakpoints.h">
-      <Filter>gui\disassembler</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

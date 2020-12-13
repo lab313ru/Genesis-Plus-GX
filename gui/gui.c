@@ -198,10 +198,6 @@ void run_gui()
     if (pthread_create(threadId, &attr, (void*(*)(void*))update_windows, NULL))
         return;
 #endif
-
-#ifdef _WIN32
-    create_breakpoints_window();
-#endif
 }
 
 void stop_gui()
@@ -216,8 +212,6 @@ void stop_gui()
     set_cpu_hook(NULL);
 
 #ifdef _WIN32
-    destroy_breakpoints_window();
-
     disable_visual_styles();
 #endif
 }

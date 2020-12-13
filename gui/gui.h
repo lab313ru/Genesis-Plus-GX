@@ -10,7 +10,6 @@ extern "C" {
 #include "plane_explorer.h"
 #include "vdp_ram_debug.h"
 #include "hex_editor.h"
-#include "breakpoints.h"
 
 #define UpdateMSG (WM_USER+0x0001)
 

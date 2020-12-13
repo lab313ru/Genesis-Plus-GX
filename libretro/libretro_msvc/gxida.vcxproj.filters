@@ -20,6 +20,9 @@
     <ClCompile Include="..\..\core\debug\debug_wrap.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\ida\moc_bpts_window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\core\debug\debug_wrap.h">
@@ -31,5 +34,10 @@
     <ClInclude Include="..\..\ida\ida_plugin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\ida\bpts_window.h">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>
