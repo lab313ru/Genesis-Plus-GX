@@ -692,6 +692,10 @@ void process_breakpoints(bpt_type_t type, int width, unsigned int address, unsig
         }
 
         if (!dbg_req_core->dbg_paused) {
+            if (address < MAXROMSIZE && !dbg_req_core->pc_map[address >> 1].applied) {
+                dbg_req_core->pc_map[address >> 1].to_apply = 1;
+            }
+
             if (dbg_step_over && address == dbg_step_over_addr) {
                 dbg_step_over = 0;
                 dbg_step_over_addr = 0;

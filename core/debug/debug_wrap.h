@@ -249,12 +249,18 @@ typedef struct {
 } bpt_list_t;
 
 typedef struct {
+    int to_apply;
+    int applied;
+} pc_map_t;
+
+typedef struct {
     request_type_t req_type;
     register_data_t regs_data;
     memory_data_t mem_data;
     bpt_data_t bpt_data;
     unsigned int dbg_events_count;
     debugger_event_t dbg_events[MAX_DBG_EVENTS];
+    pc_map_t pc_map[MAXROMSIZE >> 1];
     bpt_list_t bpt_list;
     int dbg_active, dbg_paused;
 } dbg_request_t;
