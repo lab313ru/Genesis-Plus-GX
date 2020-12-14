@@ -129,8 +129,12 @@ static void make_segments(size_t romsize)
     add_segment(0x00A00000, 0x00A0FFFF + 1, Z80, DATA, "Z80 Memory", SEGPERM_READ | SEGPERM_WRITE);
     add_segment(0x00A10000, 0x00A10FFF + 1, REGS, XTRN, "System registers", SEGPERM_WRITE);
     add_segment(0x00A11000, 0x00A11FFF + 1, Z80C, XTRN, "Z80 control (/BUSREQ and /RESET lines)", SEGPERM_WRITE);
-    add_segment(0x00A12000, 0x00AFFFFF + 1, ASSR, XTRN, "Assorted registers", SEGPERM_WRITE);
-    add_segment(0x00B00000, 0x00BFFFFF + 1, UNLK, DATA, "Unallocated", SEGPERM_READ | SEGPERM_WRITE);
+    if (ASKBTN_YES == ask_yn(ASKBTN_NO, "Create FDC, TIME segment?"))
+    add_segment(0x00A12000, 0x00AFFFFF + 1, ASSR, XTRN, "Assorted registers", SEGPERM_READ | SEGPERM_WRITE);
+    else
+    add_segment(0x00A14000, 0x00A14003 + 1, "TMSS", XTRN, "TMSS register", SEGPERM_READ | SEGPERM_WRITE);
+
+    //add_segment(0x00B00000, 0x00BFFFFF + 1, UNLK, DATA, "Unallocated", SEGPERM_READ | SEGPERM_WRITE);
 
     add_segment(0x00C00000, 0x00C0001F + 1, VDP, XTRN, "VDP Registers", SEGPERM_WRITE);
     add_segment(0x00FF0000, 0x00FFFFFF + 1, RAM, CODE, "RAM segment", SEGPERM_MAXVAL);
