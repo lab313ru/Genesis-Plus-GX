@@ -40,13 +40,13 @@ typedef enum {
     BPT_VSRAM_RW = BPT_VSRAM_R | BPT_VSRAM_W,
 
     // Z80
-    BPT_Z80_E = (1 << 11),
-    BPT_Z80_R = (1 << 12),
-    BPT_Z80_W = (1 << 13),
-    BPT_Z80_RW = BPT_Z80_R | BPT_Z80_W,
-    BPT_Z80_RE = BPT_Z80_R | BPT_Z80_E,
-    BPT_Z80_WE = BPT_Z80_W | BPT_Z80_E,
-    BPT_Z80_RWE = BPT_Z80_R | BPT_Z80_W | BPT_Z80_E,
+    //BPT_Z80_E = (1 << 11),
+    //BPT_Z80_R = (1 << 12),
+    //BPT_Z80_W = (1 << 13),
+    //BPT_Z80_RW = BPT_Z80_R | BPT_Z80_W,
+    //BPT_Z80_RE = BPT_Z80_R | BPT_Z80_E,
+    //BPT_Z80_WE = BPT_Z80_W | BPT_Z80_E,
+    //BPT_Z80_RWE = BPT_Z80_R | BPT_Z80_W | BPT_Z80_E,
 
     // REGS
     BPT_VDP_REG = (1 << 9),
