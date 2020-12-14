@@ -750,7 +750,7 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
         }
         switch (wParam) {
         case IDC_C_HEX_GOTO:
-            DialogBoxParam(dbg_wnd_hinst, MAKEINTRESOURCE(IDD_PROMPT), hDlg, (DLGPROC)HexGoToProc, (LPARAM)Hex);
+            DialogBoxParam(pinst, MAKEINTRESOURCE(IDD_PROMPT), hDlg, (DLGPROC)HexGoToProc, (LPARAM)Hex);
             break;
 
         case IDC_C_HEX_DUMP: {
@@ -1036,8 +1036,14 @@ LRESULT CALLBACK HexEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lPara
 
     case WM_CLOSE:
         HexDestroyDialog(Hex);
-        UnregisterClass("HEXEDITOR", dbg_wnd_hinst);
+        UnregisterClass("HEXEDITOR", pinst);
         PostQuitMessage(0);
+
+        if (hThread) {
+            CloseHandle(hThread);
+            hThread = 0;
+        }
+
         return FALSE;
     }
     return DefWindowProc(hDlg, uMsg, wParam, lParam);
@@ -1052,9 +1058,9 @@ void HexCreateDialog() {
     wndclass.lpfnWndProc = HexEditorProc;
     wndclass.cbClsExtra = 0;
     wndclass.cbWndExtra = sizeof(HexParams *);
-    wndclass.hInstance = dbg_wnd_hinst;
-    wndclass.hIcon = LoadIcon(dbg_wnd_hinst, MAKEINTRESOURCE(IDI_GENS));
-    wndclass.hIconSm = LoadIcon(dbg_wnd_hinst, MAKEINTRESOURCE(IDI_GENS));
+    wndclass.hInstance = pinst;
+    wndclass.hIcon = LoadIcon(pinst, MAKEINTRESOURCE(IDI_GENS));
+    wndclass.hIconSm = LoadIcon(pinst, MAKEINTRESOURCE(IDI_GENS));
     wndclass.hCursor = LoadCursor(NULL, IDC_ARROW);
     wndclass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
     wndclass.lpszMenuName = "HEXEDITOR_MENU";
@@ -1073,7 +1079,7 @@ void HexCreateDialog() {
     HexLoadSymbols();
     HexEditorHwnd = CreateWindowEx(0, "HEXEDITOR", "Hex Editor",
         WS_SYSMENU | WS_SIZEBOX | WS_MINIMIZEBOX | WS_VSCROLL,
-        0, 0, 100, 100, NULL, NULL, dbg_wnd_hinst, &HexEditor);
+        0, 0, 100, 100, NULL, NULL, pinst, &HexEditor);
     ShowWindow(HexEditorHwnd, SW_SHOW);
     HexUpdateCaption(&HexEditor);
 }
@@ -1107,19 +1113,27 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
 void create_hex_editor()
 {
-    hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
+    if (HexEditorHwnd == NULL) {
+        hThread = CreateThread(0, NULL, ThreadProc, NULL, NULL, NULL);
+    }
 }
 
 void destroy_hex_editor()
 {
-    SendMessage(HexEditorHwnd, WM_CLOSE, 0, 0);
+    if (HexEditorHwnd) {
+        SendMessage(HexEditorHwnd, WM_CLOSE, 0, 0);
+    }
 
-    TerminateThread(hThread, 0);
-    CloseHandle(hThread);
+    if (hThread) {
+        TerminateThread(hThread, 0);
+        CloseHandle(hThread);
+        hThread = 0;
+    }
 }
 
 void update_hex_editor()
 {
-    if (HexEditorHwnd)
+    if (HexEditorHwnd) {
         HexUpdateDialog(&HexEditor, 0);
+    }
 }

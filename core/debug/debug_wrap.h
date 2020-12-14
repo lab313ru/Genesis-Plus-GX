@@ -22,6 +22,9 @@ typedef enum {
     BPT_M68K_R = (1 << 1),
     BPT_M68K_W = (1 << 2),
     BPT_M68K_RW = BPT_M68K_R | BPT_M68K_W,
+    BPT_M68K_RE = BPT_M68K_R | BPT_M68K_E,
+    BPT_M68K_WE = BPT_M68K_W | BPT_M68K_E,
+    BPT_M68K_RWE = BPT_M68K_R | BPT_M68K_W | BPT_M68K_E,
 
     // VDP
     BPT_VRAM_R = (1 << 3),
@@ -37,10 +40,13 @@ typedef enum {
     BPT_VSRAM_RW = BPT_VSRAM_R | BPT_VSRAM_W,
 
     // Z80
-    BPT_Z80_E = (1 << 11),
-    BPT_Z80_R = (1 << 12),
-    BPT_Z80_W = (1 << 13),
-    BPT_Z80_RW = BPT_Z80_R | BPT_Z80_W,
+    //BPT_Z80_E = (1 << 11),
+    //BPT_Z80_R = (1 << 12),
+    //BPT_Z80_W = (1 << 13),
+    //BPT_Z80_RW = BPT_Z80_R | BPT_Z80_W,
+    //BPT_Z80_RE = BPT_Z80_R | BPT_Z80_E,
+    //BPT_Z80_WE = BPT_Z80_W | BPT_Z80_E,
+    //BPT_Z80_RWE = BPT_Z80_R | BPT_Z80_W | BPT_Z80_E,
 
     // REGS
     BPT_VDP_REG = (1 << 9),
@@ -243,25 +249,28 @@ typedef struct {
 } bpt_list_t;
 
 typedef struct {
+    int to_apply;
+    int applied;
+} pc_map_t;
+
+typedef struct {
     request_type_t req_type;
     register_data_t regs_data;
     memory_data_t mem_data;
     bpt_data_t bpt_data;
-    int dbg_events_count_dis;
-    int dbg_events_count_ida;
-    debugger_event_t dbg_events_dis[MAX_DBG_EVENTS];
-    debugger_event_t dbg_events_ida[MAX_DBG_EVENTS];
+    unsigned int dbg_events_count;
+    debugger_event_t dbg_events[MAX_DBG_EVENTS];
+    pc_map_t pc_map[MAXROMSIZE >> 1];
     bpt_list_t bpt_list;
     int dbg_active, dbg_paused;
-    int is_ida;
 } dbg_request_t;
 #pragma pack(pop)
 
+dbg_request_t* create_shared_mem();
 dbg_request_t *open_shared_mem();
-void close_shared_mem(dbg_request_t **request);
-int recv_dbg_event_dis(dbg_request_t *request, int wait);
+void close_shared_mem(dbg_request_t **request, int do_unmap);
 int recv_dbg_event_ida(dbg_request_t* request, int wait);
-void send_dbg_request(dbg_request_t *request, request_type_t type);
+void send_dbg_request(dbg_request_t *request, request_type_t type, int ignore_active);
 
 #ifdef __cplusplus
 }

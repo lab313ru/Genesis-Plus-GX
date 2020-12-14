@@ -26,6 +26,9 @@
 
 #include "ida_debmod.h"
 
+#include "bpts_window.h"
+#include "debug_wrap.h"
+
 extern debugger_t debugger;
 
 static bool plugin_inited;
@@ -611,7 +614,7 @@ static void do_cmt_vdp_rw_command(ea_t ea, uint32 val)
                 ::qsnprintf(name, sizeof(name), "DO_WRITE_TO_VSRAM_AT_$%.4X_ADDR", addr);
                 append_cmt(ea, name, false);
             } break;
-            case ((1 << 31) | (0 << 5) | (0 << 4)) /*100*/: // CRAM
+            case (unsigned int)((1 << 31) | (0 << 5) | (0 << 4)) /*100*/: // CRAM
             {
                 ::qsnprintf(name, sizeof(name), "DO_WRITE_TO_CRAM_AT_$%.4X_ADDR", addr);
                 append_cmt(ea, name, false);
@@ -740,17 +743,524 @@ static const char smd_constant_name[] = "gensida:smd_constant";
 static smd_constant_action_t smd_constant;
 static action_desc_t smd_constant_action = ACTION_DESC_LITERAL(smd_constant_name, "Identify SMD constant", &smd_constant, "J", NULL, -1);
 
+extern dbg_request_t* dbg_req;
+TWidget* bpts_w = nullptr;
+const char* bpts_w_name = "M68000 Breakpoints";
+static QTableWidget* bpList = nullptr;
+static QLineEdit* bpAddr = nullptr;
+static QComboBox* bpSize = nullptr;
+static QRadioButton* bp68kTypeBtn = nullptr, /**bpZ80TypeBtn = nullptr,*/ *bpVramTypeBtn,
+                     *bpCramTypeBtn = nullptr, *bpVsramTypeBtn = nullptr;
+static QCheckBox* bpExecType = nullptr, *bpReadType = nullptr, *bpWriteType = nullptr;
+
+static void add_bpt_list_item(const bpt_data_t* bpt_item, int index) {
+    if (bpts_w == nullptr) {
+        return;
+    }
+
+    if (index == -1) {
+        index = bpList->rowCount();
+    }
+
+    bpList->insertRow(index);
+
+    QTableWidgetItem* item0 = new QTableWidgetItem(bpt_item->enabled ? "X" : "");
+    item0->setTextAlignment(Qt::AlignCenter | Qt::AlignVCenter);
+    QTableWidgetItem* item1 = new QTableWidgetItem(QString::number(bpt_item->address, 16));
+    item1->setTextAlignment(Qt::AlignCenter | Qt::AlignVCenter);
+    QTableWidgetItem* item2 = new QTableWidgetItem(QString::number(bpt_item->width));
+    item2->setTextAlignment(Qt::AlignCenter | Qt::AlignVCenter);
+    bpList->setItem(index, 0, item0);
+    bpList->setItem(index, 1, item1);
+    bpList->setItem(index, 2, item2);
+
+    QString type;
+
+    switch (bpt_item->type) {
+    case BPT_M68K_E: type = "M68K_E"; break;
+    case BPT_M68K_R: type = "M68K_R"; break;
+    case BPT_M68K_W: type = "M68K_W"; break;
+    case BPT_M68K_RE: type = "M68K_RE"; break;
+    case BPT_M68K_WE: type = "M68K_WE"; break;
+    case BPT_M68K_RW: type = "M68K_RW"; break;
+    case BPT_M68K_RWE: type = "M68K_RWE"; break;
+
+        // VDP
+    case BPT_VRAM_R: type = "VRAM_R"; break;
+    case BPT_VRAM_W: type = "VRAM_W"; break;
+    case BPT_VRAM_RW: type = "VRAM_RW"; break;
+
+    case BPT_CRAM_R: type = "CRAM_R"; break;
+    case BPT_CRAM_W: type = "CRAM_W"; break;
+    case BPT_CRAM_RW: type = "CRAM_RW"; break;
+
+    case BPT_VSRAM_R: type = "VSRAM_R"; break;
+    case BPT_VSRAM_W: type = "VSRAM_W"; break;
+    case BPT_VSRAM_RW: type = "VSRAM_RW"; break;
+
+        // Z80
+    //case BPT_Z80_E: type = "Z80_E"; break;
+    //case BPT_Z80_R: type = "Z80_R"; break;
+    //case BPT_Z80_W: type = "Z80_W"; break;
+    //case BPT_Z80_RE: type = "Z80_RE"; break;
+    //case BPT_Z80_WE: type = "Z80_WE"; break;
+    //case BPT_Z80_RW: type = "Z80_RW"; break;
+    //case BPT_Z80_RWE: type = "Z80_RWE"; break;
+        //break;
+    }
+
+    QTableWidgetItem* item3 = new QTableWidgetItem(type);
+    item3->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    bpList->setItem(index, 3, item3);
+
+    bpList->resizeColumnsToContents();
+}
+
+static bpt_type_t strToBptType(const QString& text) {
+    if (!text.compare("M68K_E")) {
+        return BPT_M68K_E;
+    } else if (!text.compare("M68K_R")) {
+        return BPT_M68K_R;
+    }
+    else if (!text.compare("M68K_W")) {
+        return BPT_M68K_W;
+    }
+    else if (!text.compare("M68K_RW")) {
+        return BPT_M68K_RW;
+    }
+    else if (!text.compare("M68K_RE")) {
+        return BPT_M68K_RE;
+    }
+    else if (!text.compare("M68K_WE")) {
+        return BPT_M68K_WE;
+    }
+    else if (!text.compare("M68K_RWE")) {
+        return BPT_M68K_RWE;
+    }
+    /*else if (!text.compare("Z80_E")) {
+        return BPT_Z80_E;
+    }
+    else if (!text.compare("Z80_R")) {
+        return BPT_Z80_R;
+    }
+    else if (!text.compare("Z80_W")) {
+        return BPT_Z80_W;
+    }
+    else if (!text.compare("Z80_RW")) {
+        return BPT_Z80_RW;
+    }
+    else if (!text.compare("Z80_RE")) {
+        return BPT_Z80_RE;
+    }
+    else if (!text.compare("Z80_WE")) {
+        return BPT_Z80_WE;
+    }
+    else if (!text.compare("Z80_RWE")) {
+        return BPT_Z80_RWE;
+    }*/
+    else if (!text.compare("VRAM_R")) {
+        return BPT_VRAM_R;
+    }
+    else if (!text.compare("VRAM_W")) {
+        return BPT_VRAM_W;
+    }
+    else if (!text.compare("VRAM_RW")) {
+        return BPT_VRAM_RW;
+    }
+    else if (!text.compare("CRAM_R")) {
+        return BPT_CRAM_R;
+    }
+    else if (!text.compare("CRAM_W")) {
+        return BPT_CRAM_W;
+    }
+    else if (!text.compare("CRAM_RW")) {
+        return BPT_CRAM_RW;
+    }
+    else if (!text.compare("VSRAM_R")) {
+        return BPT_VSRAM_R;
+    }
+    else if (!text.compare("VSRAM_W")) {
+        return BPT_VSRAM_W;
+    }
+    else if (!text.compare("VSRAM_RW")) {
+        return BPT_VSRAM_RW;
+    }
+    else {
+        return BPT_M68K_E;
+    }
+}
+
+static void delete_breakpoint_from_list(int index, bool from_event) {
+    if (bpts_w == nullptr) {
+        return;
+    }
+
+    if (index == -1) {
+        return;
+    }
+
+    unsigned int address = bpList->item(index, 1)->text().toUInt(nullptr, 16);
+    bpt_type_t type = strToBptType(bpList->item(index, 3)->text());
+    bool isM68k = bpList->item(index, 3)->text().contains("M68K");
+
+    bool res = true;
+
+    if (!from_event) {
+        if (isM68k) {
+            res = del_bpt(address);
+        }
+        else {
+            bpList->removeRow(index);
+        }
+    }
+    else {
+        bpList->removeRow(index);
+    }
+
+    if (!dbg_req || dbg_req->dbg_active != 1 || !res) {
+        return;
+    }
+
+    bpt_data_t* bpt_data = &dbg_req->bpt_data;
+    bpt_data->address = address;
+    bpt_data->type = type;
+    send_dbg_request(dbg_req, REQ_DEL_BREAK, 0);
+}
+
+static bpttype_t gxBptToIda(bpt_type_t type) {
+    if (type & BPT_M68K_RWE) {
+        bpttype_t ida_bp_type = (bpttype_t)0;
+
+        if (type & BPT_M68K_E) {
+            ida_bp_type = BPT_EXEC;
+        }
+        if (type & BPT_M68K_R) {
+            ida_bp_type |= BPT_READ;
+        }
+        if (type & BPT_M68K_W) {
+            ida_bp_type |= BPT_WRITE;
+        }
+
+        return ida_bp_type;
+    }
+    else {
+        return BPT_SOFT;
+    }
+}
+
+bpt_type_t idaBptToGx(bpttype_t type) {
+    bpt_type_t gxType = BPT_ANY;
+
+    if (type & BPT_SOFT) {
+        return BPT_M68K_RWE;
+    }
+
+    if (type & BPT_READ) {
+        gxType = BPT_M68K_R;
+    }
+    if (type & BPT_WRITE) {
+        gxType = (bpt_type_t)(gxType | BPT_M68K_W);
+    }
+    if (type & BPT_EXEC) {
+        gxType = (bpt_type_t)(gxType | BPT_M68K_E);
+    }
+
+    return gxType;
+}
+
+void BptsWindow::addBreakpoint() {
+    bool addrOk = false;
+    unsigned int address = bpAddr->text().toUInt(&addrOk, 16);
+
+    if (!addrOk) {
+        warning("Wrong address value!");
+        return;
+    }
+
+    int bpt_type = bpSize->currentIndex();
+    int width;
+
+    switch (bpt_type)
+    {
+    case 1: width = 2; break;
+    case 2: width = 4; break;
+    default: width = 1; break;
+    }
+
+    bool isExec = bpExecType->isChecked();
+    bool isRead = bpReadType->isChecked();
+    bool isWrite = bpWriteType->isChecked();
+
+    bpt_type_t type = BPT_ANY;
+
+    if (bp68kTypeBtn->isChecked())
+    {
+        if (isExec)
+            type = BPT_M68K_E;
+        if (isRead)
+            type = (bpt_type_t)(type | BPT_M68K_R);
+        if (isWrite && bp68kTypeBtn->isChecked())
+            type = (bpt_type_t)(type | BPT_M68K_W);
+    }
+    else if (bpVramTypeBtn->isChecked())
+    {
+        if (isRead)
+            type = BPT_VRAM_R;
+        if (isWrite)
+            type = (bpt_type_t)(type | BPT_VRAM_W);
+    }
+    else if (bpCramTypeBtn->isChecked())
+    {
+        if (isRead)
+            type = BPT_CRAM_R;
+        if (isWrite)
+            type = (bpt_type_t)(type | BPT_CRAM_W);
+    }
+    else if (bpVsramTypeBtn->isChecked())
+    {
+        if (isRead)
+            type = BPT_VSRAM_R;
+        if (isWrite)
+            type = (bpt_type_t)(type | BPT_VSRAM_W);
+    }
+    //else if (bpZ80TypeBtn->isChecked())
+    //{
+    //    if (isRead)
+    //        type = BPT_Z80_R;
+    //    if (isWrite)
+    //        type = (bpt_type_t)(type | BPT_Z80_W);
+    //}
+
+    bool res = true;
+
+    if (type & BPT_M68K_RWE) {
+        res = add_bpt(address, width, gxBptToIda(type));
+    }
+    else {
+        bpt_data_t bpt;
+        bpt.enabled = 1;
+        bpt.address = address;
+        bpt.width = width;
+        bpt.type = type;
+
+        add_bpt_list_item(&bpt, -1);
+    }
+
+    if (!dbg_req || dbg_req->dbg_active != 1 || !res) {
+        return;
+    }
+
+    bpt_data_t* _bpt_data = &dbg_req->bpt_data;
+
+    _bpt_data->enabled = 1;
+    _bpt_data->address = address;
+    _bpt_data->width = width;
+    _bpt_data->type = type;
+    send_dbg_request(dbg_req, REQ_ADD_BREAK, 0);
+}
+
+void BptsWindow::delBreakpoint() {
+    QItemSelectionModel* select = bpList->selectionModel();
+
+    if (!select->hasSelection()) {
+        return;
+    }
+
+    int row = bpList->currentRow();
+    delete_breakpoint_from_list(row, false);
+}
+
+void BptsWindow::clrBreakpoints() {
+    int rows = bpList->rowCount();
+    for (int i = 0; i < rows; ++i) {
+        delete_breakpoint_from_list(0, false);
+    }
+
+    if (!dbg_req || dbg_req->dbg_active != 1) {
+        return;
+    }
+
+    send_dbg_request(dbg_req, REQ_CLEAR_BREAKS, 0);
+}
+
+void BptsWindow::rowDoubleClick(int row, int col) {
+    bpt_data_t bpt;
+    bpt.enabled = bpList->item(row, 0)->text().indexOf('X') == -1;
+    bpt.address = bpList->item(row, 1)->text().toUInt(nullptr, 16);
+    bpt.width = bpList->item(row, 2)->text().toUInt(nullptr);
+
+    QString bptType = bpList->item(row, 3)->text();
+    bpt.type = strToBptType(bptType);
+
+    bool isM68k = bptType.startsWith("M68K");
+    if (isM68k) {
+        enable_bpt(bpt.address, bpt.enabled);
+    } 
+    else {
+        bpList->item(row, 0)->setText(bpt.enabled ? "X" : "");
+
+        if (!dbg_req || dbg_req->dbg_active != 1) {
+            return;
+        }
+
+        bpt_data_t* bpt_data_new = &dbg_req->bpt_data;
+        bpt_data_new->address = bpt.address;
+        bpt_data_new->type = bpt.type;
+        bpt_data_new->width = bpt.width;
+
+        send_dbg_request(dbg_req, REQ_TOGGLE_BREAK, 0);
+    }
+
+    bpList->selectRow(row);
+}
+
 //--------------------------------------------------------------------------
 static ssize_t idaapi hook_ui(void *user_data, int notification_code, va_list va)
 {
-    if (notification_code == ui_populating_widget_popup)
-    {
-        TWidget *widget = va_arg(va, TWidget *);
+    switch (notification_code) {
+    case ui_populating_widget_popup: {
+        TWidget* widget = va_arg(va, TWidget*);
+
         if (get_widget_type(widget) == BWN_DISASM)
         {
-            TPopupMenu *p = va_arg(va, TPopupMenu *);
+            TPopupMenu* p = va_arg(va, TPopupMenu*);
             attach_action_to_popup(widget, p, smd_constant_name);
         }
+    } break;
+    case ui_widget_visible: {
+        TWidget* widget = va_arg(va, TWidget*);
+
+        if (widget == bpts_w) {
+            QWidget* w = (QWidget*)widget;
+
+#pragma region "Breakpoints window"
+            QGridLayout* mainLayout = new QGridLayout(w);
+
+            QGridLayout* bpTypesGbLayout = new QGridLayout(w);
+            QGroupBox* bpTypesGb = new QGroupBox(w);
+
+            QFont font = QFont("Lucida Console", 10);
+            bp68kTypeBtn = new QRadioButton("68K", w);
+            bp68kTypeBtn->setChecked(true);
+            bp68kTypeBtn->setFont(font);
+            bpTypesGbLayout->addWidget(bp68kTypeBtn, 0, 0);
+            /*bpZ80TypeBtn = new QRadioButton("Z80 RAM", w);
+            bpZ80TypeBtn->setFont(font);
+            bpTypesGbLayout->addWidget(bpZ80TypeBtn, 0, 1);*/
+            bpVramTypeBtn = new QRadioButton("VRAM", w);
+            bpVramTypeBtn->setFont(font);
+            bpTypesGbLayout->addWidget(bpVramTypeBtn, 0, 1);
+            bpCramTypeBtn = new QRadioButton("CRAM", w);
+            bpCramTypeBtn->setFont(font);
+            bpTypesGbLayout->addWidget(bpCramTypeBtn, 0, 2);
+            bpVsramTypeBtn = new QRadioButton("VSRAM", w);
+            bpVsramTypeBtn->setFont(font);
+            bpTypesGbLayout->addWidget(bpVsramTypeBtn, 0, 3);
+            bpTypesGb->setLayout(bpTypesGbLayout);
+            bpTypesGb->setAlignment(Qt::AlignTop);
+
+            QGridLayout* bpAddrLayout = new QGridLayout(w);
+            QLabel* bpAddrL = new QLabel("Address: ", w);
+            bpAddrL->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+            bpAddrL->setFont(font);
+
+            bpAddr = new QLineEdit(w);
+            bpAddr->setFont(font);
+            bpAddr->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+            bpAddr->setMaxLength(6);
+            QRegExp rgx("[0-9a-fA-F]{1,6}");
+            QValidator* comValidator = new QRegExpValidator(rgx, bpAddr);
+            bpAddr->setValidator(comValidator);
+            bpAddrLayout->addWidget(bpAddrL, 0, 0);
+            bpAddrLayout->addWidget(bpAddr, 0, 1);
+
+            bpSize = new QComboBox(w);
+            
+            bpSize->addItems({ "1 byte", "2 bytes", "4 bytes" });
+            bpSize->setEditable(false);
+            bpSize->setFont(font);
+
+            QGridLayout* bpErwLayout = new QGridLayout(w);
+            bpExecType = new QCheckBox("Exec", w);
+            bpExecType->setChecked(true);
+            bpExecType->setFont(font);
+            bpReadType = new QCheckBox("Read", w);
+            bpReadType->setChecked(true);
+            bpReadType->setFont(font);
+            bpWriteType = new QCheckBox("Write", w);
+            bpWriteType->setChecked(true);
+            bpWriteType->setFont(font);
+            bpErwLayout->addWidget(bpExecType, 0, 0);
+            bpErwLayout->addWidget(bpReadType, 0, 1);
+            bpErwLayout->addWidget(bpWriteType, 0, 2);
+            bpErwLayout->addWidget(bpSize, 0, 3);
+
+            QGridLayout* btnsLayout = new QGridLayout(w);
+            QPushButton* bpAddBtn = new QPushButton("Add", w);
+            bpAddBtn->setFont(font);
+            btnsLayout->addWidget(bpAddBtn, 0, 0);
+            QPushButton* bpDelBtn = new QPushButton("Delete", w);
+            bpDelBtn->setFont(font);
+            btnsLayout->addWidget(bpDelBtn, 0, 1);
+            QPushButton* bpClearBtn = new QPushButton("Clear", w);
+            bpClearBtn->setFont(font);
+            btnsLayout->addWidget(bpClearBtn, 0, 2);
+
+            bpList = new QTableWidget(w);
+            bpList->setEditTriggers(QAbstractItemView::NoEditTriggers);
+            bpList->setFocusPolicy(Qt::NoFocus);
+            bpList->setShowGrid(false);
+            bpList->setColumnCount(4);
+            bpList->setFont(font);
+            bpList->setSelectionBehavior(QAbstractItemView::SelectRows);
+            bpList->setSelectionMode(QAbstractItemView::SingleSelection);
+            bpList->setHorizontalHeaderLabels({ "Enabled", "Address", "Size", "Type" });
+            bpList->horizontalHeaderItem(0)->setToolTip("Is breakpoint enabled");
+            bpList->horizontalHeaderItem(1)->setToolTip("Breakpoint address");
+            bpList->horizontalHeaderItem(2)->setToolTip("Breakpoint size");
+            bpList->horizontalHeaderItem(3)->setToolTip("Breakpoint type");
+
+            bpList->resizeColumnsToContents();
+
+            int idaBpts = get_bpt_qty();
+
+            for (int i = 0; i < idaBpts; ++i) {
+                bpt_t bp;
+                getn_bpt(i, &bp);
+
+                bpt_data_t bpt_data;
+                bpt_data.enabled = bp.enabled() ? 1 : 0;
+                bpt_data.address = (unsigned int)bp.ea;
+                bpt_data.width = bp.size;
+
+                bpt_data.type = idaBptToGx(bp.type);
+                add_bpt_list_item(&bpt_data, -1);
+            }
+
+            mainLayout->addWidget(bpTypesGb, 0, 0);
+            mainLayout->addLayout(bpAddrLayout, 0, 1);
+            mainLayout->addLayout(bpErwLayout, 1, 0);
+            mainLayout->addLayout(btnsLayout, 1, 1);
+            mainLayout->addWidget(bpList, 2, 0, 1, 3);
+
+            w->setLayout(mainLayout);
+
+            BptsWindow* bptsWindow = new BptsWindow(w);
+            QObject::connect(bpAddBtn, SIGNAL(clicked()), bptsWindow, SLOT(addBreakpoint()));
+            QObject::connect(bpDelBtn, SIGNAL(clicked()), bptsWindow, SLOT(delBreakpoint()));
+            QObject::connect(bpClearBtn, SIGNAL(clicked()), bptsWindow, SLOT(clrBreakpoints()));
+            QObject::connect(bpAddr, SIGNAL(returnPressed()), bptsWindow, SLOT(addBreakpoint()));
+            QObject::connect(bpList, SIGNAL(cellDoubleClicked(int, int)), bptsWindow, SLOT(rowDoubleClick(int, int)));
+#pragma endregion
+        }
+    } break;
+    case ui_widget_invisible: {
+        TWidget* widget = va_arg(va, TWidget*);
+
+        if (widget == bpts_w) {
+            bpts_w = nullptr;
+        }
+    } break;
     }
 
     return 0;
@@ -758,13 +1268,8 @@ static ssize_t idaapi hook_ui(void *user_data, int notification_code, va_list va
 
 typedef const regval_t& (idaapi* getreg_func_t)(const char* name, const regval_t* regvalues);
 
-struct plugin_ctx_t : public plugmod_t, post_event_visitor_t
+struct m68k_events_visitor_t : public post_event_visitor_t
 {
-    bool idaapi run(size_t) override
-    {
-        return false;
-    }
-
     ssize_t idaapi handle_post_event(ssize_t code, int notification_code, va_list va) override
     {
         switch (notification_code)
@@ -1091,17 +1596,91 @@ struct plugin_ctx_t : public plugmod_t, post_event_visitor_t
         } break;
         default:
         {
-#ifdef _DEBUG
+        #ifdef _DEBUG
             if (my_dbg)
             {
-                msg("msg = %d\n", notification_code);
+                qstring p;
+                p.sprnt("%d\n", notification_code);
+                OutputDebugStringA(p.c_str());
             }
-#endif
+        #endif
         } break;
         }
         return code;
     }
 } ctx;
+
+struct bpt_events_visitor_t : public post_event_visitor_t
+{
+    ssize_t idaapi handle_post_event(ssize_t code, int notification_code, va_list va) override
+    {
+        switch (notification_code) {
+        case dbg_notification_t::dbg_process_start: {
+            const debug_event_t* dbg_evt = va_arg(va, const debug_event_t*);
+
+            int rows_count = bpList->rowCount();
+
+            for (int i = 0; i < rows_count; ++i) {
+                bool enabled = bpList->item(i, 0)->text().indexOf('X') == 0;
+                unsigned int address = bpList->item(i, 1)->text().toUInt(nullptr, 16);
+                unsigned int width = bpList->item(i, 2)->text().toUInt(nullptr);
+                bpt_type_t type = strToBptType(bpList->item(i, 3)->text());
+                
+                bool isM68k = bpList->item(i, 3)->text().startsWith("M68K");
+
+                if (isM68k) {
+                    continue; // do not send ida BPs here
+                }
+
+                bpt_data_t* _bpt_data = &dbg_req->bpt_data;
+
+                _bpt_data->enabled = enabled;
+                _bpt_data->address = address;
+                _bpt_data->width = width;
+                _bpt_data->type = type;
+                send_dbg_request(dbg_req, REQ_ADD_BREAK, 0);
+            }
+        } break;
+        case dbg_notification_t::dbg_bpt_changed: {
+            int bptev_code = va_arg(va, int);
+            bpt_t* bpt = va_arg(va, bpt_t*);
+
+            int removed_row = -1;
+
+            switch (bptev_code) {
+            case BPTEV_REMOVED:
+            case BPTEV_CHANGED: {
+                int rows = bpList->rowCount();
+                for (int i = 0; i < rows; ++i) {
+                    unsigned int selAddr = bpList->item(i, 1)->text().toUInt(nullptr, 16);
+
+                    if (selAddr == (unsigned int)bpt->ea) {
+                        delete_breakpoint_from_list(i, true);
+                        removed_row = i;
+                        break;
+                    }
+                }
+
+                if (bptev_code == BPTEV_REMOVED) {
+                    break;
+                }
+            }
+            case BPTEV_ADDED: {
+                bpt_data_t bpt_data;
+                bpt_data.enabled = bpt->enabled() ? 1 : 0;
+                bpt_data.address = (unsigned int)bpt->ea;
+                bpt_data.width = bpt->size;
+
+                bpt_data.type = idaBptToGx(bpt->type);
+                add_bpt_list_item(&bpt_data, removed_row);
+            } break;
+            }
+        } break;
+        }
+
+        return code;
+    }
+} bpt_ctx;
 
 //--------------------------------------------------------------------------
 // Initialize debugger plugin
@@ -1113,10 +1692,11 @@ static plugmod_t * idaapi init(void)
         plugin_inited = true;
         my_dbg = false;
 
-        bool res = register_action(smd_constant_action);
+        register_action(smd_constant_action);
 
         hook_to_notification_point(HT_UI, hook_ui, NULL);
         register_post_event_visitor(HT_IDP, &ctx, nullptr);
+        register_post_event_visitor(HT_DBG, &bpt_ctx, nullptr);
 
         print_version();
         return PLUGIN_KEEP;
@@ -1132,6 +1712,7 @@ static void idaapi term(void)
     {
         unhook_from_notification_point(HT_UI, hook_ui);
         unregister_post_event_visitor(HT_IDP, &ctx);
+        unregister_post_event_visitor(HT_DBG, &bpt_ctx);
 
         unregister_action(smd_constant_name);
 

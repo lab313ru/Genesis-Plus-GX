@@ -67,8 +67,7 @@
     <Link>
       <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>Comctl32.lib;capstone_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../../gui/capstone;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -87,8 +86,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>Comctl32.lib;capstone_64.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>../../gui/capstone;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -188,7 +186,6 @@
     <ClCompile Include="..\..\core\vdp_ctrl.c" />
     <ClCompile Include="..\..\core\vdp_render.c" />
     <ClCompile Include="..\..\core\z80\z80.c" />
-    <ClCompile Include="..\..\gui\disasembler.cpp" />
     <ClCompile Include="..\..\gui\edit_fields.cpp" />
     <ClCompile Include="..\..\gui\gui.c" />
     <ClCompile Include="..\..\gui\hex_editor.cpp" />
@@ -327,7 +324,6 @@
     <ClInclude Include="..\..\core\vdp_ctrl.h" />
     <ClInclude Include="..\..\core\vdp_render.h" />
     <ClInclude Include="..\..\core\z80\z80.h" />
-    <ClInclude Include="..\..\gui\disassembler.h" />
     <ClInclude Include="..\..\gui\edit_fields.h" />
     <ClInclude Include="..\..\gui\gui.h" />
     <ClInclude Include="..\..\gui\hex_editor.h" />

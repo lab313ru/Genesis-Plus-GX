@@ -1,3 +1,5 @@
+#include <QWidget>
+
 #include <ida.hpp>
 #include <idd.hpp>
 #include <auto.hpp>
@@ -5,29 +7,34 @@
 #include <idp.hpp>
 #include <dbg.hpp>
 
+#include "ida_plugin.h"
 #include "ida_debmod.h"
 
 #include "debug_wrap.h"
 
-static dbg_request_t *dbg_req = NULL;
+extern TWidget* bpts_w;
+extern const char* bpts_w_name;
+
+dbg_request_t *dbg_req = NULL;
 
 static void pause_execution()
 {
-    send_dbg_request(dbg_req, request_type_t::REQ_PAUSE);
+    send_dbg_request(dbg_req, request_type_t::REQ_PAUSE, 0);
 }
 
 static void continue_execution()
 {
-    send_dbg_request(dbg_req, request_type_t::REQ_RESUME);
+    send_dbg_request(dbg_req, request_type_t::REQ_RESUME, 0);
 }
 
 static void stop_debugging()
 {
-    send_dbg_request(dbg_req, request_type_t::REQ_STOP);
+    send_dbg_request(dbg_req, request_type_t::REQ_STOP, 1);
 }
 
-eventlist_t g_events;
+static eventlist_t g_events;
 static qthread_t events_thread = NULL;
+static qthread_t pc_map_thread = NULL;
 
 static const char *const SRReg[] =
 {
@@ -164,30 +171,46 @@ static void finish_execution()
         qthread_kill(events_thread);
         events_thread = NULL;
     }
+
+    if (pc_map_thread != NULL)
+    {
+        qthread_join(pc_map_thread);
+        qthread_free(pc_map_thread);
+        qthread_kill(pc_map_thread);
+        pc_map_thread = NULL;
+    }
 }
 
 static drc_t idaapi init_debugger(const char* hostname, int portnum, const char* password, qstring *errbuf)
 {
     set_processor_type(ph.psnames[0], SETPROC_LOADER); // reset proc to "M68000"
+
+    TWidget* widget = find_widget(bpts_w_name);
+
+    if (widget == nullptr) {
+        bpts_w = create_empty_widget(bpts_w_name);
+        display_widget(bpts_w, WOPN_DP_TAB_BEFORE | WOPN_RESTORE | WOPN_PERSIST);
+    }
+
     return DRC_OK;
 }
 
 static drc_t idaapi term_debugger(void)
 {
-    if (dbg_req)
-    {
-        dbg_req->is_ida = 0;
-        close_shared_mem(&dbg_req);
+    if (dbg_req) {
+        close_shared_mem(&dbg_req, 0);
     }
+
+    close_widget(bpts_w, WCLS_SAVE);
+    bpts_w = nullptr;
+
     return DRC_OK;
 }
 
 static int idaapi check_debugger_events(void *ud)
 {
-    while (dbg_req->dbg_active || dbg_req->dbg_events_count_ida)
+    while (dbg_req && (dbg_req->dbg_active == 1 || dbg_req->dbg_events_count > 0))
     {
-        dbg_req->is_ida = 1;
-
         int event_index = recv_dbg_event_ida(dbg_req, 0);
         if (event_index == -1)
         {
@@ -195,7 +218,7 @@ static int idaapi check_debugger_events(void *ud)
             continue;
         }
 
-        debugger_event_t *dbg_event = &dbg_req->dbg_events_ida[event_index];
+        debugger_event_t *dbg_event = &dbg_req->dbg_events[event_index];
 
         debug_event_t ev;
         switch (dbg_event->type)
@@ -256,6 +279,19 @@ static int idaapi check_debugger_events(void *ud)
     return 0;
 }
 
+static int idaapi apply_pc_map(void* ud) {
+    while (dbg_req && dbg_req->dbg_active == 1) {
+        for (int addr = 0; dbg_req && dbg_req->dbg_active == 1 && !dbg_req->dbg_paused && addr < (MAXROMSIZE >> 1); ++addr) {
+            if (dbg_req && dbg_req->pc_map[addr].to_apply == 1 && !dbg_req->pc_map[addr].applied) {
+                dbg_req->pc_map[addr].applied = 1;
+                auto_make_code((ea_t)(addr << 1));
+            }
+        }
+    }
+
+    return 0;
+}
+
 static drc_t idaapi s_start_process(const char *path,
     const char *args,
     const char *startdir,
@@ -279,6 +315,12 @@ static drc_t idaapi s_start_process(const char *path,
             if (user_cancelled()) {
                 break;
             }
+
+            qsleep(10);
+        }
+
+        while (dbg_req && (dbg_req->dbg_active != 1 || dbg_req->dbg_events_count == 0) && !user_cancelled()) {
+            qsleep(10);
         }
 
         hide_wait_box();
@@ -286,8 +328,9 @@ static drc_t idaapi s_start_process(const char *path,
 
     if (dbg_req) {
         events_thread = qthread_create(check_debugger_events, NULL);
+        send_dbg_request(dbg_req, request_type_t::REQ_ATTACH, 1);
 
-        send_dbg_request(dbg_req, request_type_t::REQ_ATTACH);
+        pc_map_thread = qthread_create(apply_pc_map, NULL);
 
         return DRC_OK;
     }
@@ -345,10 +388,10 @@ static drc_t idaapi s_set_resume_mode(thid_t tid, resume_mode_t resmod)
     switch (resmod)
     {
     case RESMOD_INTO:
-        send_dbg_request(dbg_req, request_type_t::REQ_STEP_INTO);
+        send_dbg_request(dbg_req, request_type_t::REQ_STEP_INTO, 0);
         break;
     case RESMOD_OVER:
-        send_dbg_request(dbg_req, request_type_t::REQ_STEP_OVER);
+        send_dbg_request(dbg_req, request_type_t::REQ_STEP_OVER, 0);
         break;
     }
 
@@ -363,7 +406,7 @@ static drc_t idaapi read_registers(thid_t tid, int clsmask, regval_t *values, qs
     if (clsmask & RC_GENERAL)
     {
         dbg_req->regs_data.type = register_type_t::REG_TYPE_M68K;
-        send_dbg_request(dbg_req, request_type_t::REQ_GET_REGS);
+        send_dbg_request(dbg_req, request_type_t::REQ_GET_REGS, 0);
 
         regs_68k_data_t *reg_vals = &dbg_req->regs_data.regs_68k;
 
@@ -397,7 +440,7 @@ static drc_t idaapi read_registers(thid_t tid, int clsmask, regval_t *values, qs
     if (clsmask & RC_VDP)
     {
         dbg_req->regs_data.type = register_type_t::REG_TYPE_VDP;
-        send_dbg_request(dbg_req, request_type_t::REQ_GET_REGS);
+        send_dbg_request(dbg_req, request_type_t::REQ_GET_REGS, 0);
 
         vdp_regs_t *vdp_regs = &dbg_req->regs_data.vdp_regs;
 
@@ -414,7 +457,7 @@ static drc_t idaapi read_registers(thid_t tid, int clsmask, regval_t *values, qs
     if (clsmask & RC_Z80)
     {
         dbg_req->regs_data.type = register_type_t::REG_TYPE_Z80;
-        send_dbg_request(dbg_req, request_type_t::REQ_GET_REGS);
+        send_dbg_request(dbg_req, request_type_t::REQ_GET_REGS, 0);
 
         regs_z80_data_t *z80_regs = &dbg_req->regs_data.regs_z80;
 
@@ -439,7 +482,7 @@ static void set_reg(register_type_t type, int reg_index, unsigned int value)
     dbg_req->regs_data.type = type;
     dbg_req->regs_data.any_reg.index = reg_index;
     dbg_req->regs_data.any_reg.val = value;
-    send_dbg_request(dbg_req, request_type_t::REQ_SET_REG);
+    send_dbg_request(dbg_req, request_type_t::REQ_SET_REG, 0);
 }
 
 static drc_t idaapi write_register(thid_t tid, int regidx, const regval_t *value, qstring *errbuf)
@@ -518,8 +561,8 @@ static ssize_t idaapi read_memory(ea_t ea, void *buffer, size_t size, qstring *e
     if ((ea >= 0xA00000 && ea < 0xA0FFFF))
     {
         dbg_req->mem_data.address = ea;
-        dbg_req->mem_data.size = size;
-        send_dbg_request(dbg_req, request_type_t::REQ_READ_Z80);
+        dbg_req->mem_data.size = (int)size;
+        send_dbg_request(dbg_req, request_type_t::REQ_READ_Z80, 0);
 
         memcpy(buffer, &dbg_req->mem_data.z80_ram[ea & 0x1FFF], size);
         // Z80
@@ -527,16 +570,16 @@ static ssize_t idaapi read_memory(ea_t ea, void *buffer, size_t size, qstring *e
     else if (ea < MAXROMSIZE)
     {
         dbg_req->mem_data.address = ea;
-        dbg_req->mem_data.size = size;
-        send_dbg_request(dbg_req, request_type_t::REQ_READ_68K_ROM);
+        dbg_req->mem_data.size = (int)size;
+        send_dbg_request(dbg_req, request_type_t::REQ_READ_68K_ROM, 0);
 
         memcpy(buffer, &dbg_req->mem_data.m68k_rom[ea], size);
     }
     else if ((ea >= 0xFF0000 && ea < 0x1000000))
     {
         dbg_req->mem_data.address = ea;
-        dbg_req->mem_data.size = size;
-        send_dbg_request(dbg_req, request_type_t::REQ_READ_68K_RAM);
+        dbg_req->mem_data.size = (int)size;
+        send_dbg_request(dbg_req, request_type_t::REQ_READ_68K_RAM, 0);
 
         memcpy(buffer, &dbg_req->mem_data.m68k_ram[ea & 0xFFFF], size);
         // RAM
@@ -573,26 +616,11 @@ static drc_t idaapi update_bpts(int* nbpts, update_bpt_info_t *bpts, int nadd, i
         ea_t end = bpts[i].ea + bpts[i].size - 1;
         
         bpt_data_t *bpt_data = &dbg_req->bpt_data;
-
-        switch (bpts[i].type)
-        {
-        case BPT_EXEC:
-            bpt_data->type = bpt_type_t::BPT_M68K_E;
-            break;
-        case BPT_READ:
-            bpt_data->type = bpt_type_t::BPT_M68K_R;
-            break;
-        case BPT_WRITE:
-            bpt_data->type = bpt_type_t::BPT_M68K_W;
-            break;
-        case BPT_RDWR:
-            bpt_data->type = bpt_type_t::BPT_M68K_RW;
-            break;
-        }
+        bpt_data->type = idaBptToGx(bpts[i].type);
 
         bpt_data->address = start;
         bpt_data->width = bpts[i].size;
-        send_dbg_request(dbg_req, request_type_t::REQ_ADD_BREAK);
+        send_dbg_request(dbg_req, request_type_t::REQ_ADD_BREAK, 0);
 
         bpts[i].code = BPT_OK;
     }
@@ -621,7 +649,7 @@ static drc_t idaapi update_bpts(int* nbpts, update_bpt_info_t *bpts, int nadd, i
         }
 
         bpt_data->address = start;
-        send_dbg_request(dbg_req, request_type_t::REQ_DEL_BREAK);
+        send_dbg_request(dbg_req, request_type_t::REQ_DEL_BREAK, 0);
 
         bpts[nadd + i].code = BPT_OK;
     }

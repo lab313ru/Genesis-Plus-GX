@@ -606,6 +606,12 @@ BOOL CALLBACK PlaneExplorerDialogProc(HWND hwnd, UINT Message, WPARAM wParam, LP
         PlaneExplorerHWnd = NULL;
         PostQuitMessage(0);
         EndDialog(hwnd, 0);
+
+        if (hThread) {
+            CloseHandle(hThread);
+            hThread = 0;
+        }
+
         break;
 
     case WM_MOUSELEAVE:
@@ -678,9 +684,10 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 {
     MSG msg;
 
-    PlaneExplorerHWnd = CreateDialog(dbg_wnd_hinst, MAKEINTRESOURCE(IDD_PLANEEXPLORER), dbg_window, (DLGPROC)PlaneExplorerDialogProc);
+    PlaneExplorerHWnd = CreateDialog(pinst, MAKEINTRESOURCE(IDD_PLANEEXPLORER), rarch, (DLGPROC)PlaneExplorerDialogProc);
     ShowWindow(PlaneExplorerHWnd, SW_SHOW);
     UpdateWindow(PlaneExplorerHWnd);
+    SetForegroundWindow(PlaneExplorerHWnd);
 
     HANDLE hMutex = CreateMutex(NULL, FALSE, PLANE_EXPLORER_MUTEX);
 
@@ -700,18 +707,27 @@ static DWORD WINAPI ThreadProc(LPVOID lpParam)
 
 void create_plane_explorer()
 {
-    hThread = CreateThread(0, 0, ThreadProc, NULL, 0, NULL);
+    if (PlaneExplorerHWnd == NULL) {
+        hThread = CreateThread(0, 0, ThreadProc, NULL, 0, NULL);
+    }
 }
 
 void destroy_plane_explorer()
 {
-    SendMessage(PlaneExplorerHWnd, WM_CLOSE, 0, 0);
+    if (PlaneExplorerHWnd) {
+        SendMessage(PlaneExplorerHWnd, WM_CLOSE, 0, 0);
+    }
 
-    CloseHandle(hThread);
+    if (hThread) {
+        TerminateThread(hThread, 0);
+        CloseHandle(hThread);
+        hThread = 0;
+    }
 }
 
 void update_plane_explorer()
 {
-    if (PlaneExplorerHWnd)
+    if (PlaneExplorerHWnd) {
         SendMessage(PlaneExplorerHWnd, UpdateMSG, 0, 0);
+    }
 }
