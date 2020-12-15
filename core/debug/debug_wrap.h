@@ -105,7 +105,6 @@ typedef enum {
 typedef struct {
     dbg_event_type_t type;
     unsigned int pc;
-    char msg[256];
 } debugger_event_t;
 
 typedef struct {

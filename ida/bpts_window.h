@@ -2,12 +2,12 @@
 
 #include <QtWidgets>
 
-class BptsWindow : public QObject
+class BptsWindow : public QWidget
 {
     Q_OBJECT
 
 public:
-    BptsWindow(QObject* _parent) : QObject(_parent) {}
+    BptsWindow(QWidget* _parent) : QWidget(_parent) {}
 
 private slots:
     void addBreakpoint();
