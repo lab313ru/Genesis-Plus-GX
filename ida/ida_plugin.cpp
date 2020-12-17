@@ -1616,6 +1616,8 @@ struct bpt_events_visitor_t : public post_event_visitor_t
     {
         switch (notification_code) {
         case dbg_notification_t::dbg_process_start: {
+            set_dock_pos(bpts_w_name, nullptr, DP_TAB);
+
             const debug_event_t* dbg_evt = va_arg(va, const debug_event_t*);
 
             int rows_count = bpList->rowCount();
